@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
 import time
-import motor.motor_asyncio
+
 from datetime import datetime
 from supabase import create_client, Client
 
@@ -12,7 +12,8 @@ from bot import (
     extract_product_info,
     analyze_smart_data,
     get_safe_link,
-    aliexpress
+    aliexpress,
+    fallback_scrape
 )
 
 app = FastAPI()
@@ -60,6 +61,9 @@ async def analyze(data: LinkRequest):
     )
 
     details = results[0][0] if not isinstance(results[0], Exception) and results[0] else None
+
+    if not details:
+        details = await fallback_scrape(item_url)
 
     if not details:
         return {"error": "not found"}
