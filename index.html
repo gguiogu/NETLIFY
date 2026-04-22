@@ -1761,14 +1761,19 @@ async function doAn() {
      if(data.error) throw new Error(data.error);
 
      currentProduct = {
-         title: data.title,
-         price_usd: data.price_usd,
-         price_dzd: data.price_dzd,
+         title: data.title || 'منتج غير معروف',
+         price_usd: data.price_usd || 0,
+         price_dzd: data.price_dzd || 0,
          url: url
      };
      
-     $('#product-img').src = data.image;
-     $('#res-title').innerText = data.title;
+     if (data.image) {
+         $('#product-img').src = data.image;
+     } else {
+         $('#product-img').src = 'logo.png';
+     }
+     
+     $('#res-title').innerText = data.title || 'جاري التحليل...';
      
      if (data.discount && data.discount > 0) {
          $('#discount-badge').style.display = 'block';
@@ -1876,7 +1881,7 @@ async function submitReview() {
   $('.brv').innerText = 'جاري الإرسال...';
   
   try {
-     const res = await fetch("/api/comments", {
+     const res = await fetch("https://netlify-mlhd.onrender.com/api/comments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, city, text, rating: curSt, product })
@@ -1893,7 +1898,7 @@ async function submitReview() {
 
 async function loadReviews() {
   try {
-    const res = await fetch("/api/comments");
+    const res = await fetch("https://netlify-mlhd.onrender.com/api/comments");
     const comments = await res.json();
     let html = '';
     let total = 0;
