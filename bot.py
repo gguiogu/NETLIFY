@@ -30,8 +30,8 @@ APP_KEY = "515874"
 APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
 TRACKING_ID = '130740'
 
-USD_TO_DZD = 250
-PROFIT_MARGIN = 1.4 # هامش الربح للتاجر
+USD_TO_DZD = 265
+PROFIT_MARGIN = 1.7 # هامش الربح للتاجر
 
 aliexpress = AliexpressApi(APP_KEY, APP_SECRET, models.Language.EN, models.Currency.USD, TRACKING_ID)
 LINK_REGEX = re.compile(r'https?://([a-zA-Z0-9.-]+\.)?aliexpress\.[a-z]{2,3}(/[^\s]*)?', re.IGNORECASE)
