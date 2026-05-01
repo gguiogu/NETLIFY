@@ -1,1957 +1,924 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="Kouki Shop - AI-powered product sourcing platform from AliExpress to Algeria. Analyse products, get DZD pricing, and order via Telegram.">
-    <title>Kouki Shop - تسوق من علي إكسبريس بذكاء</title>
-    <link rel="stylesheet" href="style.css">
-    <link
-        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800&family=Outfit:wght@400;600;800&display=swap"
-        rel="stylesheet">
+    <title>Kouki Shop SaaS</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link rel="icon" href="logo.png" type="image/png">
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#030308;--s1:#0a0a16;--s2:#111120;--s3:#181830;--s4:#1f1f3a;
-  --b1:rgba(255,255,255,.06);--b2:rgba(255,255,255,.11);--b3:rgba(255,255,255,.18);
-  --fire:#ff5500;--fire2:#ff7733;--gf:rgba(255,85,0,.22);--gf2:rgba(255,85,0,.1);
-  --gold:#f0b429;--gold2:#ffd166;--gg:rgba(240,180,41,.18);
-  --cyan:#00d4ff;--green:#00e676;
-  --t1:#f4f3ff;--t2:#b8b6d8;--t3:#706e95;--t4:#44425f;
-  --r:14px;--r2:20px;--r3:28px
-}
-html{scroll-behavior:smooth}
-body{font-family:'Cairo',sans-serif;background:var(--bg);color:var(--t1);direction:rtl;overflow-x:hidden;-webkit-font-smoothing:antialiased;cursor:none}
-::selection{background:var(--fire);color:#fff}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:linear-gradient(var(--fire),var(--gold));border-radius:4px}
-a{text-decoration:none;color:inherit}
-img{display:block;max-width:100%}
-
-/* CURSOR */
-#cur{position:fixed;width:9px;height:9px;background:var(--fire);border-radius:50%;pointer-events:none;z-index:99999;transform:translate(-50%,-50%);mix-blend-mode:screen;transition:transform .1s}
-#cur-r{position:fixed;width:34px;height:34px;border:1.5px solid rgba(255,85,0,.4);border-radius:50%;pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:all .14s ease}
-.ch #cur{transform:translate(-50%,-50%) scale(3)}
-.ch #cur-r{opacity:0;transform:translate(-50%,-50%) scale(1.5)}
-
-/* BG */
-.bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
-.orb{position:absolute;border-radius:50%;filter:blur(130px);animation:orb 20s ease-in-out infinite}
-.o1{width:900px;height:900px;top:-400px;right:-300px;background:radial-gradient(circle,rgba(255,85,0,.09),transparent 70%)}
-.o2{width:700px;height:700px;bottom:-300px;left:-200px;background:radial-gradient(circle,rgba(0,212,255,.07),transparent 70%);animation-delay:-7s}
-.o3{width:500px;height:500px;top:35%;left:30%;background:radial-gradient(circle,rgba(240,180,41,.055),transparent 70%);animation-delay:-13s}
-@keyframes orb{0%,100%{transform:translate(0,0)scale(1)}33%{transform:translate(50px,-40px)scale(1.06)}66%{transform:translate(-35px,55px)scale(.95)}}
-.grid{position:fixed;inset:0;z-index:0;pointer-events:none;
-  background-image:linear-gradient(rgba(255,255,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.015) 1px,transparent 1px);
-  background-size:72px 72px;mask-image:radial-gradient(ellipse 80% 75% at 50% 50%,black 30%,transparent 100%)}
-
-/* NAV */
-#nav{position:fixed;top:0;left:0;right:0;z-index:900;height:70px;display:flex;align-items:center;padding:0 max(1.5rem,4vw);transition:all .4s}
-#nav.sc{background:rgba(3,3,8,.9);backdrop-filter:blur(28px) saturate(200%);border-bottom:1px solid var(--b1);box-shadow:0 4px 48px rgba(0,0,0,.4)}
-.ni{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:1280px;margin:0 auto;gap:1rem}
-.logo{display:flex;align-items:center;gap:.65rem;text-decoration:none}
-.logo-box{width:42px;height:42px;background:linear-gradient(135deg,var(--fire),#b33000);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;box-shadow:0 0 0 1px rgba(255,85,0,.3),0 8px 28px rgba(255,85,0,.3);transition:all .3s;flex-shrink:0}
-.logo:hover .logo-box{transform:rotate(-8deg) scale(1.1)}
-.logo-txt{font-family:'Tajawal',sans-serif;font-size:1.3rem;font-weight:900}
-.logo-txt em{color:var(--fire);font-style:normal}
-.nm{display:flex;align-items:center;gap:.1rem}
-.nl{color:var(--t3);font-size:.84rem;font-weight:600;padding:.42rem .8rem;border-radius:8px;transition:all .2s;position:relative}
-.nl::after{content:'';position:absolute;bottom:2px;left:.8rem;right:.8rem;height:1.5px;background:var(--fire);transform:scaleX(0);transition:transform .25s;border-radius:99px}
-.nl:hover{color:var(--t1)}.nl:hover::after{transform:scaleX(1)}
-.na{display:flex;align-items:center;gap:.6rem}
-.btn-ghost{padding:.42rem 1rem;border:1px solid var(--b2);background:none;color:var(--t2);font-size:.83rem;font-weight:600;border-radius:9px;cursor:pointer;transition:all .22s;font-family:'Cairo',sans-serif;display:flex;align-items:center;gap:.4rem}
-.btn-ghost:hover{background:var(--b1);border-color:var(--b3);color:var(--t1)}
-.btn-nav{padding:.44rem 1.25rem;background:linear-gradient(135deg,var(--fire),#b33000);color:#fff;font-size:.83rem;font-weight:700;border:none;border-radius:9px;cursor:pointer;font-family:'Cairo',sans-serif;transition:all .25s;box-shadow:0 4px 18px var(--gf2);text-decoration:none;display:inline-flex;align-items:center}
-.btn-nav:hover{transform:translateY(-2px);box-shadow:0 8px 28px var(--gf)}
-.hbg{display:none;width:40px;height:40px;border:1px solid var(--b2);background:none;border-radius:9px;cursor:pointer;color:var(--t2);font-size:.95rem;align-items:center;justify-content:center}
-.hbg:hover{border-color:rgba(255,85,0,.3);color:var(--fire)}
-@media(max-width:880px){.nm{display:none}.hbg{display:flex}}
-
-/* HERO */
-.hero{position:relative;z-index:1;min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:96px clamp(1rem,4vw,3rem) 60px;text-align:center;overflow:hidden}
-.pill{display:inline-flex;align-items:center;gap:.55rem;background:rgba(255,85,0,.09);border:1px solid rgba(255,85,0,.22);color:var(--fire2);padding:.36rem 1.1rem;border-radius:99px;font-size:.8rem;font-weight:700;margin-bottom:2.2rem;animation:pIn .9s cubic-bezier(.34,1.56,.64,1) both;position:relative;overflow:hidden}
-.pill::before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,85,0,.12),transparent);animation:shim 3.5s ease-in-out infinite}
-.pdot{width:6px;height:6px;background:var(--fire);border-radius:50%;box-shadow:0 0 8px var(--fire);animation:pulse 2s ease-in-out infinite}
-@keyframes pIn{from{opacity:0;transform:translateY(-12px)scale(.9)}to{opacity:1;transform:none}}
-@keyframes shim{0%{transform:translateX(200%)}100%{transform:translateX(-200%)}}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-.h1{font-family:'Tajawal',sans-serif;font-size:clamp(3rem,7.5vw,5.8rem);font-weight:900;line-height:1.08;letter-spacing:-1.5px;margin-bottom:1.5rem;animation:hIn 1s ease .1s both}
-@keyframes hIn{from{opacity:0;transform:translateY(32px)}to{opacity:1;transform:none}}
-.h1 .ga{display:block;background:linear-gradient(90deg,var(--fire) 0%,var(--gold) 40%,var(--cyan) 85%);background-size:250%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gm 6s ease-in-out infinite}
-@keyframes gm{0%,100%{background-position:0%}50%{background-position:100%}}
-.hsub{color:var(--t2);font-size:clamp(1rem,2.2vw,1.22rem);line-height:1.9;max-width:640px;margin:0 auto 3rem;animation:hIn 1s ease .2s both}
-.hstats{display:flex;justify-content:center;gap:clamp(2rem,5vw,5rem);flex-wrap:wrap;margin-bottom:3rem;animation:hIn 1s ease .3s both}
-.hs .n{font-family:'Tajawal',sans-serif;font-size:clamp(2rem,4vw,3rem);font-weight:900;background:linear-gradient(135deg,var(--fire),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
-.hs .l{color:var(--t3);font-size:.79rem;margin-top:.25rem}
-.hbtns{display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;margin-bottom:4rem;animation:hIn 1s ease .4s both}
-.btn-fire{display:inline-flex;align-items:center;gap:.6rem;padding:1rem 2.5rem;border-radius:14px;background:linear-gradient(135deg,var(--fire),#b33000);color:#fff;font-family:'Cairo',sans-serif;font-size:1rem;font-weight:700;border:none;cursor:pointer;box-shadow:0 8px 36px var(--gf),inset 0 1px 0 rgba(255,255,255,.12);transition:all .3s cubic-bezier(.34,1.56,.64,1);position:relative;overflow:hidden;text-decoration:none}
-.btn-fire::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.1),transparent);transition:left .5s}
-.btn-fire:hover{transform:translateY(-4px)scale(1.02);box-shadow:0 16px 52px var(--gf)}.btn-fire:hover::before{left:150%}
-.btn-out{display:inline-flex;align-items:center;gap:.6rem;padding:1rem 2rem;border-radius:14px;background:var(--b1);color:var(--t1);border:1px solid var(--b2);cursor:pointer;font-family:'Cairo',sans-serif;font-size:1rem;font-weight:600;transition:all .25s;text-decoration:none}
-.btn-out:hover{background:var(--b2);border-color:rgba(255,85,0,.4);color:var(--fire2);transform:translateY(-2px)}
-
-/* ANALYZER */
-.abox{width:100%;max-width:780px;background:rgba(255,255,255,.03);border:1px solid var(--b2);border-radius:var(--r3);padding:1.75rem;backdrop-filter:blur(24px);position:relative;overflow:hidden;animation:hIn 1.2s ease .5s both;box-shadow:0 32px 80px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.07)}
-.abox::before{content:'';position:absolute;top:0;right:0;left:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,85,0,.6),rgba(240,180,41,.5),transparent)}
-.albl{font-size:.76rem;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem}
-.albl::before{content:'';width:6px;height:6px;background:var(--fire);border-radius:50%;box-shadow:0 0 8px var(--fire)}
-.arow{display:flex;gap:.65rem;align-items:stretch}
-.afield{flex:1;position:relative}
-.afield i{position:absolute;right:1rem;top:50%;transform:translateY(-50%);color:var(--t4);font-size:.9rem;pointer-events:none}
-.afield input{width:100%;height:52px;background:rgba(255,255,255,.05);border:1px solid var(--b1);border-radius:12px;padding:0 2.75rem 0 1rem;color:var(--t1);font-family:'Cairo',sans-serif;font-size:.93rem;direction:rtl;transition:all .22s}
-.afield input::placeholder{color:var(--t4)}
-.afield input:focus{outline:none;border-color:rgba(255,85,0,.4);background:rgba(255,85,0,.04);box-shadow:0 0 0 3px rgba(255,85,0,.07)}
-.btn-an{height:52px;padding:0 1.6rem;background:linear-gradient(135deg,var(--fire),#b33000);color:#fff;font-family:'Cairo',sans-serif;font-size:.93rem;font-weight:700;border:none;border-radius:12px;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:.5rem;transition:all .25s;box-shadow:0 4px 22px var(--gf2)}
-.btn-an:hover{transform:translateY(-2px);box-shadow:0 8px 32px var(--gf)}
-.btn-an:disabled{opacity:.6;cursor:not-allowed;transform:none}
-#aerr{color:#ff6b6b;font-size:.81rem;margin-top:.5rem;min-height:14px}
-.tchips{display:flex;justify-content:center;gap:.65rem;flex-wrap:wrap;margin-top:1.1rem}
-.tc{display:inline-flex;align-items:center;gap:.38rem;font-size:.77rem;color:var(--t3);font-weight:600}
-.tc i{color:var(--fire);font-size:.73rem}
-.tsep{color:var(--t4)}
-
-/* LOADING */
-#als{display:none;margin-top:1.5rem;background:var(--s2);border:1px solid var(--b1);border-radius:var(--r2);padding:2rem;max-width:460px;margin-left:auto;margin-right:auto;text-align:center}
-.spin{width:52px;height:52px;border-radius:50%;border:2px solid var(--b1);border-top-color:var(--fire);border-right-color:var(--gold);animation:sp .7s linear infinite;margin:0 auto 1.25rem}
-@keyframes sp{to{transform:rotate(360deg)}}
-.lstep{display:flex;align-items:center;gap:.7rem;padding:.42rem .7rem;border-radius:9px;font-size:.87rem;color:var(--t3);margin-bottom:.25rem;transition:.25s}
-.lstep.on{background:rgba(255,85,0,.06);color:var(--t1)}.lstep.dn{color:var(--green)}
-.ldo{width:7px;height:7px;border-radius:50%;background:var(--t4);flex-shrink:0}
-.lstep.on .ldo{background:var(--fire);box-shadow:0 0 8px var(--fire)}.lstep.dn .ldo{background:var(--green)}
-
-/* RESULT */
-#ard{display:none;width:100%;max-width:900px;margin-top:2rem}
-.rcard{background:linear-gradient(135deg,var(--s2),var(--s3));border:1px solid var(--b1);border-radius:var(--r3);padding:2rem;position:relative;overflow:hidden}
-.rcard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,85,0,.5),transparent)}
-.rlay{display:flex;flex-wrap:wrap;gap:1.5rem}
-.rc1{flex:1;min-width:260px}.rc2{flex:1.3;min-width:260px}
-.pimgw{background:#fff;border-radius:var(--r2);overflow:hidden;position:relative;margin-bottom:1rem;box-shadow:0 8px 40px rgba(0,0,0,.4)}
-.dsb{position:absolute;top:.7rem;right:.7rem;background:linear-gradient(135deg,#e53935,#b71c1c);color:#fff;padding:.28rem .8rem;border-radius:8px;font-size:.78rem;font-weight:700}
-.rinv{background:rgba(255,255,255,.03);border:1px solid var(--b1);border-radius:var(--r2);padding:1.35rem}
-.rinv h4{font-weight:800;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem;font-size:.95rem}
-.invr{display:flex;justify-content:space-between;padding:.55rem 0;border-bottom:1px solid var(--b1);font-size:.88rem}
-.invr:last-child{border:none}.invl{color:var(--t3)}
-.invtot{display:flex;justify-content:space-between;align-items:center;padding-top:.9rem;margin-top:.4rem;border-top:1px dashed var(--b2)}
-.invtn{font-family:'Tajawal',sans-serif;font-size:2.1rem;font-weight:900;color:var(--fire)}
-.schip{display:inline-block;background:var(--b2);border-radius:8px;padding:.28rem .8rem;font-size:.78rem;font-weight:700;margin-bottom:.9rem}
-.ppd{display:flex;align-items:baseline;gap:.7rem;margin-bottom:1.1rem}
-.pm{font-family:'Tajawal',sans-serif;font-size:3.8rem;font-weight:900;color:var(--fire);line-height:1}
-.pc{font-family:'Tajawal',sans-serif;font-size:2rem;font-weight:900;color:var(--fire)}
-.po{text-decoration:line-through;color:var(--t3);font-size:1.1rem}
-.pnn{font-size:.8rem;color:var(--t3);margin-bottom:.8rem;line-height:1.5}
-.prat{display:flex;align-items:center;gap:.5rem;margin-bottom:1rem;font-size:.88rem}
-.shbox{background:rgba(0,230,118,.05);border:1px solid rgba(0,230,118,.2);border-radius:var(--r);padding:1.1rem;margin-bottom:1.1rem}
-.apan{background:rgba(13,110,253,.04);border:2px solid rgba(13,110,253,.2);border-radius:var(--r2);padding:1.75rem;text-align:center}
-.apan h3{font-family:'Tajawal',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:.4rem}
-.apan p{color:var(--t2);font-size:.86rem;margin-bottom:1.1rem;line-height:1.6}
-.abtns{display:flex;gap:.65rem;flex-wrap:wrap}
-.abtn{flex:1;min-width:90px;padding:.75rem .4rem;border:none;border-radius:11px;color:#fff;font-family:'Cairo',sans-serif;font-size:.87rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.4rem;transition:all .22s}
-.abtn:hover{transform:scale(1.04);filter:brightness(1.08)}
-.ab-fb{background:linear-gradient(135deg,#1877f2,#1050b0)}
-.ab-wa{background:linear-gradient(135deg,#25d366,#128c42)}
-.ab-tg{background:linear-gradient(135deg,#0088cc,#005f90)}
-.abtn img{width:18px;height:18px;object-fit:contain}
-.wn{background:rgba(240,180,41,.07);border:1px solid rgba(240,180,41,.18);border-radius:10px;padding:.8rem;font-size:.8rem;color:var(--gold2);margin-top:.75rem;line-height:1.6}
-
-/* LAYOUT */
-.con{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:0 max(1.5rem,3vw)}
-.sec{padding:5.5rem 0}
-.sh{text-align:center;margin-bottom:3rem}
-.stag{display:inline-flex;align-items:center;gap:.45rem;background:rgba(255,85,0,.08);border:1px solid rgba(255,85,0,.18);color:var(--fire2);padding:.28rem .85rem;border-radius:99px;font-size:.74rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:1rem}
-.st{font-family:'Tajawal',sans-serif;font-size:clamp(1.9rem,4vw,3.2rem);font-weight:900;line-height:1.12;letter-spacing:-.5px}
-.st .ac{color:var(--fire)}
-.ss{color:var(--t2);font-size:.97rem;line-height:1.8;max-width:560px;margin:.75rem auto 0}
-.div{height:1px;background:linear-gradient(to right,transparent,var(--b2),transparent);position:relative;z-index:1;margin:0 max(1.5rem,3vw)}
-
-/* REVEAL */
-.rv{opacity:0;transform:translateY(24px);transition:opacity .75s ease,transform .75s ease}
-.rv.in{opacity:1;transform:none}
-
-/* REVIEWS */
-.rsum{display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;background:var(--s2);border:1px solid var(--b2);border-radius:var(--r3);padding:2rem 2.5rem;margin-bottom:2rem}
-.rsn{font-family:'Tajawal',sans-serif;font-size:4.2rem;font-weight:900;color:var(--gold2);line-height:1;text-align:center}
-.rss{font-size:1.1rem;margin:.25rem 0}.rst{color:var(--t3);font-size:.77rem}
-.rbs{flex:1;min-width:180px}
-.rbr{display:flex;align-items:center;gap:.6rem;margin-bottom:.38rem}
-.rbl{color:var(--t3);font-size:.77rem;min-width:18px;text-align:left}
-.rbt{flex:1;height:5px;background:var(--s3);border-radius:99px;overflow:hidden}
-.rbf{height:100%;background:linear-gradient(90deg,var(--gold),var(--fire));border-radius:99px;transition:width 1.2s ease}
-.rbc{color:var(--t4);font-size:.72rem;min-width:18px}
-.rvg{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:1rem;margin-bottom:2rem}
-.rvc{background:var(--s2);border:1px solid var(--b1);border-radius:var(--r2);padding:1.3rem;transition:.28s}
-.rvc:hover{border-color:rgba(240,180,41,.2);transform:translateY(-3px)}
-.rvh{display:flex;align-items:center;gap:.78rem;margin-bottom:.85rem}
-.rvav{width:44px;height:44px;min-width:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;color:#fff}
-.rvn{font-weight:700;font-size:.9rem}.rvm{color:var(--t3);font-size:.75rem;margin-top:.1rem}
-.rvs{display:flex;gap:2px;margin-bottom:.48rem}
-.sf{color:var(--gold2);font-size:.88rem}.se{color:var(--b2);font-size:.88rem}
-.rvt{color:var(--t2);font-size:.85rem;line-height:1.75}
-.rvtg{display:inline-flex;align-items:center;gap:.32rem;background:rgba(255,85,0,.08);border:1px solid rgba(255,85,0,.15);border-radius:8px;padding:.22rem .58rem;font-size:.72rem;color:var(--fire2);margin-top:.72rem}
-.rvv{display:inline-flex;align-items:center;gap:.28rem;background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.18);border-radius:99px;padding:.17rem .52rem;font-size:.69rem;color:var(--green);margin-top:.45rem}
-
-/* REVIEW FORM */
-.rvf{background:var(--s3);border:1px solid var(--b2);border-radius:var(--r3);padding:2.25rem;margin-top:1.5rem}
-.rvf h3{font-family:'Tajawal',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:1.4rem}
-.spk{display:flex;gap:.32rem;flex-direction:row-reverse;justify-content:flex-end;margin-bottom:.9rem}
-.sp{font-size:2.1rem;cursor:pointer;color:var(--b2);transition:color .14s,transform .14s;user-select:none}
-.sp:hover,.sp.on{color:var(--gold2);transform:scale(1.18)}
-.rvfg{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
-.rvfg .fu{grid-column:1/-1}
-.fg{display:flex;flex-direction:column;}
-.fg input,.fg select,.fg textarea{background:var(--b1);border:1px solid var(--b1);border-radius:11px;padding:.78rem 1rem;color:var(--t1);font-family:'Cairo',sans-serif;font-size:.88rem;direction:rtl;width:100%;transition:.22s}
-.fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:rgba(255,85,0,.4);background:rgba(255,85,0,.04);box-shadow:0 0 0 3px rgba(255,85,0,.07)}
-.brv{background:linear-gradient(135deg,var(--gold),#c28000);color:#111;border:none;border-radius:12px;padding:.88rem 2.5rem;font-family:'Cairo',sans-serif;font-size:.93rem;font-weight:700;cursor:pointer;box-shadow:0 6px 22px var(--gg);transition:.25s}
-.brv:hover{transform:translateY(-2px);box-shadow:0 10px 30px var(--gg)}
-#rvok{display:none;margin-top:1rem;padding:.9rem;background:rgba(0,230,118,.07);border:1px solid rgba(0,230,118,.2);border-radius:10px;color:var(--green);font-weight:700;text-align:center}
-.rv-stat{font-size:.78rem;color:var(--t3);margin-top:.5rem}
-
-/* GUARANTEE / ABOUT */
-.guar{background:linear-gradient(135deg,rgba(0,230,118,.07),rgba(0,230,118,.02));border:1px solid rgba(0,230,118,.2);border-radius:var(--r3);padding:2.5rem;text-align:center}
-.guar h3{font-family:'Tajawal',sans-serif;font-size:1.45rem;font-weight:800;color:var(--green);margin-bottom:.8rem}
-.guar p{color:var(--t2);line-height:1.85;font-size:.93rem}
-.aboutc{background:var(--s2);border:1px solid var(--b2);border-radius:var(--r3);padding:3rem;text-align:center}
-
-/* FOOTER */
-footer{position:relative;z-index:1;background:var(--s1);border-top:1px solid var(--b1);padding:3.5rem max(1.5rem,3vw) 2rem}
-.fi{max-width:1280px;margin:0 auto;display:grid;grid-template-columns:2.2fr 1fr 1fr 1fr;gap:3rem;margin-bottom:3rem}
-.fn2{font-family:'Tajawal',sans-serif;font-size:1.35rem;font-weight:900;color:var(--fire);margin-bottom:.7rem}
-.fp{color:var(--t3);font-size:.82rem;line-height:1.7;max-width:250px}
-
-/* --- Premium Refinements --- */
-@media(max-width:880px){
-  #cur, #cur-r { display: none !important; }
-  body { cursor: auto !important; }
-}
-
-.box-glass {
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.3s ease;
-}
-
-.box-glass:hover {
-    border-color: var(--fire);
-    transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-}
-
-.com-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-    gap: 12px;
-}
-
-.com-item {
-    background: var(--s2);
-    padding: 12px;
-    border-radius: 10px;
-    text-align: center;
-    border: 1px solid var(--b1);
-    font-size: 0.85rem;
-}
-</style>
-<style>
-#digital-market, .digital-market, #game-topup {
-    display: block !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    z-index: 9999;
-}
-#marketGrid { display: grid !important; }
-.digi-card { display: flex !important; opacity: 1 !important; visibility: visible !important; }
-.skeleton-visible { display: none !important; }
-</style>
-</head>
-
-<body>
-<script>
-window.onerror = function(message, source, lineno, colno, error) {
-    fetch('/log_error', {
-        method: 'POST',
-        body: message + ' at ' + lineno + ':' + colno + ' ' + (error ? error.stack : '')
-    });
-};
-</script>
-    <div class="bg-elements">
-        <div class="blob purple"></div>
-        <div class="blob cyan"></div>
-    </div>
-
-    <nav id="nav">
-  <div class="ni">
-    <a href="/" class="logo">
-      <div class="logo-box">🛍</div>
-      <span class="logo-txt">Kouki <em>Shop</em></span>
-    </a>
-    <div class="nm">
-      <a href="#analyzer" class="nl">محلل المنتج</a>
-      <a href="#reviews" class="nl">التقييمات</a>
-    </div>
-  </div>
-</nav>
-
-    <main class="container">
-        <!-- Hero Section -->
-<div id="cur"></div><div id="cur-r"></div>
-<div class="bg"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
-<div class="grid"></div>
-<section class="hero" id="analyzer">
-  <div class="pill"><div class="pdot"></div>الوسيط التجاري الأول في الجزائر 🇩🇿</div>
-  <h1 class="h1">تسوق من كل العالم<span class="ga">وادفع بالدينار 💸</span></h1>
-  <p class="hsub"><strong>Kouki Shop</strong> — نشتري لك من أي متجر عالمي بالأورو أو الدولار. تسوق من أي مكان وادفع بالدينار الجزائري فقط 🇩🇿</p>
-  
-  <div class="abox">
-    <div class="albl">محلل المنتجات — يحلل روابط AliExpress ويستخرج السعر والصورة والتقييم</div>
-    <div class="arow">
-      <div class="afield">
-        <i class="fa-solid fa-link"></i>
-        <input type="text" id="purl" placeholder="ضع رابط منتج AliExpress للتحليل الفوري..." oninput="ce()">
-      </div>
-      <button class="btn-an" onclick="doAn()" id="anb"><i class="fa-solid fa-wand-magic-sparkles"></i> حلّل</button>
-    </div>
-    <div id="aerr"></div>
-  </div>
-  <div id="als">
-    <div class="spin"></div>
-    <h3 style="font-family:Tajawal,sans-serif;margin-bottom:1.25rem;">جاري تحليل المنتج...</h3>
-  </div>
-  <div id="ard">
-    <div class="rcard">
-      <div class="rlay">
-        <div class="rc1">
-          <div class="pimgw"><img id="pimg" src="" style="width:100%;max-height:360px;object-fit:contain;" alt=""></div>
-        </div>
-        <div class="rc2">
-          <h2 id="ptl" style="font-size:1.25rem;font-weight:800;margin-bottom:1rem;line-height:1.6;">جاري التحليل...</h2>
-          <div class="ppd"><span class="pm" id="pdzd">0</span><span class="pc">د.ج</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-        <!-- Loading State -->
-        <section id="loading-state" class="loading-container hidden">
-            <div class="loader"></div>
-            <h3 class="loading-title">جاري تحليل المنتج بالذكاء الاصطناعي...</h3>
-            <ul class="loading-steps">
-                <li class="step active" id="step-1"><i class="fa-solid fa-circle-check"></i> جلب تفاصيل المنتج</li>
-                <li class="step" id="step-2"><i class="fa-solid fa-circle-notch fa-spin"></i> التقييم وكشف الاحتيال</li>
-                <li class="step" id="step-3"><i class="fa-solid fa-circle-notch fa-spin"></i> حساب الأسعار وهوامش الربح
-                </li>
-            </ul>
-        </section>
-
-        <!-- Results Dashboard -->
-        <section id="results-dashboard" class="dashboard hidden box-glass"
-            style="padding: 24px; border-radius: 20px; text-align: right;">
-            <div class="pro-product-layout" style="display: flex; flex-wrap: wrap; gap: 30px; align-items: start;">
-
-                <!-- Right Visual: Image & Invoice (Appears on Right in RTL) -->
-                <div class="pro-image-col" style="flex: 1; min-width: 320px;">
-                    <div
-                        style="position: relative; border-radius: 15px; overflow: hidden; background: #fff; padding: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); margin-bottom: 20px;">
-                        <div id="discount-badge"
-                            style="position: absolute; top: 10px; right: 10px; background: #e53935; color: white; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; border-top-right-radius: 0;">
-                            off 0%</div>
-                        <img src="" id="product-img"
-                            style="width: 100%; object-fit: contain; max-height: 400px; display: block;">
-                    </div>
-
-                    <!-- Fatoora (Invoice) -->
-                    <div class="pro-invoice-box"
-                        style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 25px;">
-                        <h4 style="font-weight: bold; margin-bottom: 25px; font-size: 1.3rem;"><i
-                                class="fa-solid fa-receipt"></i> فاتورة مفصلة</h4>
-
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                            <span style="color: var(--text-muted); font-size: 1.05rem;">سعر المنتج:</span>
-                            <span><strong id="inv-base-dzd">0</strong> د.ج <span
-                                    style="font-size: 0.9rem; color: var(--text-muted);">(<span
-                                        id="inv-usd">$0.00</span>)</span></span>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                            <span style="color: var(--text-muted); font-size: 1.05rem;">عمولة الموقع:</span>
-                            <span style="color: var(--success); font-weight: bold; font-size: 1.05rem;">+ <span
-                                    id="inv-commission">0</span> د.ج</span>
-                        </div>
-
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 25px;">
-                            <span style="color: var(--text-muted); font-size: 1.05rem;">مصاريف الشحن:</span>
-                            <span><strong id="inv-shipping">0</strong> د.ج <span
-                                    style="font-size: 0.9rem; color: var(--text-muted);">(<span
-                                        id="inv-ship-usd">$0.00</span>)</span></span>
-                        </div>
-
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 20px;">
-                            <span style="font-weight: bold; font-size: 1.3rem;">المجموع الكلي:</span>
-                            <span style="color: #ff6b00; font-weight: 900; font-size: 2rem;"><span
-                                    id="inv-total-dzd">0</span> د.ج</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Left Visual: Details, Pricing, & Buttons (Appears on Left in RTL) -->
-                <div class="pro-details-col" style="flex: 1.2; min-width: 320px;">
-                    <div style="background: rgba(255,255,255,0.1); display: inline-block; padding: 6px 14px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 15px; font-weight: bold; color: var(--text-main);"
-                        id="store-name">AliExpress Official Store</div>
-                    <h2 class="pro-title" id="res-title"
-                        style="font-size: 1.5rem; font-weight: 800; margin-bottom: 25px; line-height: 1.6;">جاري تحميل
-                        تفاصيل المنتج...</h2>
-
-                    <div class="pro-price-box" style="margin-bottom: 25px;">
-                        <div style="display: flex; align-items: baseline; gap: 15px;">
-                            <span style="font-size: 3.5rem; font-weight: 900; color: #ff6b00; line-height: 1;"
-                                id="final-dzd">0</span>
-                            <span
-                                style="font-size: 2.5rem; font-weight: 900; color: #ff6b00; line-height: 1;">د.ج</span>
-                            <span
-                                style="text-decoration: line-through; color: var(--text-muted); font-size: 1.4rem; font-weight: bold;"
-                                id="original-usd">US $0.00</span>
-                        </div>
-                        <div style="font-size: 0.95rem; color: var(--text-muted); margin-top: 10px;" id="price-note">
-                            <i class="fa-solid fa-circle-info text-secondary"></i> السعر يشمل: المنتج (<span
-                                id="note-base">0</span> د.ج) + عمولة الموقع (<span id="note-comm">0</span> د.ج)
-                        </div>
-                    </div>
-
-                    <div class="pro-shipping box-glass"
-                        style="padding: 20px; border-radius: 15px; margin-bottom: 25px; background: rgba(255,255,255,0.02); border: 1px solid rgba(16, 185, 129, 0.3);">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <strong style="font-size: 1.1rem;"><i class="fa-solid fa-truck-fast"
-                                    style="color: var(--warning);"></i> خيارات الشحن</strong>
-                        </div>
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px; border: 1px solid var(--border-glass);">
-                            <div style="font-weight: bold; font-size: 1.2rem;" id="shipping-cost">مشمول أو يحدد لاحقاً
-                            </div>
-                            <div style="text-align: right; margin-right: 15px;">
-                                <span
-                                    style="background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 10px; border-radius: 6px; font-size: 0.85rem; font-weight: bold; margin-left: 8px;">تتبع
-                                    متاح</span> <strong style="font-size: 1.05rem;">شحن AliExpress القياسي</strong><br>
-                                <span
-                                    style="font-size: 0.95rem; color: var(--text-muted); display: inline-block; margin-top: 5px;"
-                                    id="shipping-time">يصل في: غضون 15 - 30 يوم</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="pro-action-box"
-                        style="background: rgba(13, 110, 253, 0.05); border: 2px solid rgba(13, 110, 253, 0.3); border-radius: 20px; padding: 30px;">
-                        <h3 style="text-align: center; font-weight: 900; margin-bottom: 15px; font-size: 1.4rem;">لتأكيد
-                            عملية الشراء</h3>
-                        <p
-                            style="text-align: center; font-size: 1.05rem; color: var(--text-muted); margin-bottom: 25px; line-height: 1.6;">
-                            التقط صورة (Capture) للشاشة وارسلها مع الرابط عبر واتساب أو ماسنجر لتأكيد طلبك</p>
-
-                        <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
-                            <button class="btn btn-facebook" onclick="orderNowFB()"
-                                style="flex: 1; min-width: 140px; font-weight: 800; font-size: 1.25rem; padding: 14px; background: #1a73e8; color: white; border: none; border-radius: 12px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;"
-                                onmouseover="this.style.transform='scale(1.02)';"
-                                onmouseout="this.style.transform='scale(1)';">
-                                <i class="fa-brands fa-facebook-messenger" style="font-size: 1.5rem;"></i> ماسنجر
-                            </button>
-                            <button class="btn btn-whatsapp" onclick="orderNowWhatsApp()"
-                                style="flex: 1; min-width: 140px; font-weight: 800; font-size: 1.25rem; padding: 14px; background: #25d366; color: white; border: none; border-radius: 12px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;"
-                                onmouseover="this.style.transform='scale(1.02)';"
-                                onmouseout="this.style.transform='scale(1)';">
-                                <i class="fa-brands fa-whatsapp" style="font-size: 1.5rem;"></i> واتساب
-                            </button>
-                            <button class="btn btn-telegram" onclick="orderNowPersonalTG()"
-                                style="flex: 1; min-width: 140px; font-weight: 800; font-size: 1.25rem; padding: 14px; background: #0088cc; color: white; border: none; border-radius: 12px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px;"
-                                onmouseover="this.style.transform='scale(1.02)';"
-                                onmouseout="this.style.transform='scale(1)';">
-                                <i class="fa-brands fa-telegram" style="font-size: 1.5rem;"></i> تيليجرام
-                            </button>
-                            <button class="btn-ghost" onclick="copyToClipboard()" style="width: 100%; margin-top: 15px; justify-content: center; border-style: dashed; padding: 14px; font-size: 1.1rem; border-radius: 12px; background: rgba(255,255,255,0.05); color: var(--t1); border-color: rgba(255,255,255,0.2);">
-                                <i class="fa-solid fa-copy" style="color: var(--fire);"></i> نسخ تفاصيل الطلب
-                            </button>
-                        </div>
-                        <div
-                            style="background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); padding: 15px; border-radius: 12px; font-size: 0.95rem; color: var(--warning); line-height: 1.6;">
-                            <strong style="font-size: 1.05rem;">ملاحظة:</strong> الدفع مسبق اثناء الشراء من الخارج،
-                            نشتري نيابة عنكم، ونضع عناوينكم الشخصية ثم نزودكم برقم التتبع.
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-
-
-        <!-- Shipped Products Showcase -->
-        <h2 class="section-title ">طلبات عملائنا (وصلت بنجاح) 📦✨</h2>
-        <p class="text-center text-muted " style="margin-bottom: 40px; font-size: 1.15rem;">شاهد كيف
-            تصل منتجات من AliExpress ومتاجر أخرى إلى منازل عملائنا في الجزائر بكل أمان!</p>
-
-        <section class="orders-showcase">
-            <!-- Product 1 -->
-            <div class="order-card box-glass ">
-                <div class="cartoon-avatar">
-                    <img src="https://api.dicebear.com/7.x/fun-emoji/svg?seed=Happy" alt="Happy Cartoon">
-                </div>
-                <div class="product-img-wrapper">
-                    <img src="assets/lenovo.png" alt="Lenovo Headphones" class="product-img">
-                    <span class="status-badge shipped"><i class="fa-solid fa-parachute-box"></i> تم التوصيل</span>
-                </div>
-                <div class="order-info">
-                    <h4>سماعات لينوفو بلوتوث</h4>
-                    <p class="buyer-name">العميل: كريم (ولاية سطيف)</p>
-                    <div class="delivery-time">
-                        <i class="fa-regular fa-clock"></i> وصلت في 18 يوم
-                    </div>
-                </div>
-            </div>
-
-            <!-- Product 2 -->
-            <div class="order-card box-glass " style="transition-delay: 0.1s;">
-                <div class="cartoon-avatar">
-                    <img src="https://api.dicebear.com/7.x/fun-emoji/svg?seed=Smile" alt="Smiling Cartoon">
-                </div>
-                <div class="product-img-wrapper">
-                    <img src="assets/lige.png" alt="Smart Watch" class="product-img">
-                    <span class="status-badge shipped"><i class="fa-solid fa-plane-arrival"></i> تم التوصيل</span>
-                </div>
-                <div class="order-info">
-                    <h4>ساعة ذكية LIGE 2024</h4>
-                    <p class="buyer-name">العميل: يونس (ولاية وهران)</p>
-                    <div class="delivery-time">
-                        <i class="fa-regular fa-clock"></i> وصلت في 22 يوم
-                    </div>
-                </div>
-            </div>
-
-            <!-- Product 3 -->
-            <div class="order-card box-glass " style="transition-delay: 0.2s;">
-                <div class="cartoon-avatar">
-                    <img src="https://api.dicebear.com/7.x/fun-emoji/svg?seed=Joy" alt="Joyful Cartoon">
-                </div>
-                <div class="product-img-wrapper">
-                    <img src="assets/baseus.png" alt="Baseus Charger" class="product-img">
-                    <span class="status-badge shipped" style="background: rgba(236, 72, 153, 0.9);"><i
-                            class="fa-solid fa-truck-fast"></i> في طريقها للزبون</span>
-                </div>
-                <div class="order-info">
-                    <h4>شاحن Baseus سريع</h4>
-                    <p class="buyer-name">العميلة: رفيدة (ولاية خنشلة، )</p>
-                    <div class="delivery-time" style="color: var(--primary);">
-                        <i class="fa-solid fa-spinner fa-spin"></i> متوقع في غضون 5 أيام
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Digital Services Section -->
-        <div class="section-label-bar ">
-            <span class="section-label-dot"></span>
-            <h2 class="section-title gradient-text glow" style="margin:0; font-size:2rem;">الكتالوج الرقمي</h2>
-            <span class="section-label-dot"></span>
-        </div>
-        <p class="text-center text-muted " style="margin-bottom: 30px; font-size: 1.1rem;">
-            اشتراكات أصلية مضمونة • بالدينار الجزائري • تفعيل فوري
-        </p>
-
-        <!-- Market Section Starts Here -->
-        <section id="digital-market" class="digital-market " style="margin-top: 20px;">
-            <div class="market-header" style="text-align: center; margin-bottom: 30px;">
-                <!-- Live Search -->
-                <div class="digital-search-container box-glass"
-                    style="max-width:580px; margin:0 auto 24px auto; display:flex; align-items:center; padding:14px 22px; border-radius:50px; gap:12px;">
-                    <i class="fa-solid fa-magnifying-glass" style="font-size:1.1rem; color:var(--secondary);"></i>
-                    <input type="text" id="digitalSearch" placeholder="ابحث (Netflix, Canva, ChatGPT...)"
-                        oninput="filterDigitalMarket()"
-                        style="width:100%; border:none; background:transparent; color:var(--text); font-size:1.05rem; outline:none; direction:rtl;">
-                </div>
-                <!-- Category Tabs -->
-                <div class="category-tabs-wrapper"
-                    style="position:sticky; top:70px; z-index:100; background:rgba(10,15,30,0.92); backdrop-filter:blur(16px); padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); overflow-x:auto; white-space:nowrap; box-shadow:0 8px 25px rgba(0,0,0,0.3);">
-                    <div class="category-tabs" id="marketTabs" style="display:inline-flex; gap:8px; padding:0 20px;">
-                        <button class="cat-tab active" onclick="selectCategory('all', this)">كل الخدمات</button>
-                        <button class="cat-tab" onclick="selectCategory('ai', this)">ذكاء اصطناعي</button>
-                        <button class="cat-tab" onclick="selectCategory('entertainment', this)">ترفيه</button>
-                        <button class="cat-tab" onclick="selectCategory('music', this)">موسيقى</button>
-                        <button class="cat-tab" onclick="selectCategory('design', this)">تصميم وإبداع</button>
-                        <button class="cat-tab" onclick="selectCategory('productivity', this)">إنتاجية</button>
-                        <button class="cat-tab" onclick="selectCategory('gaming', this)">ألعاب</button>
-                        <button class="cat-tab" onclick="selectCategory('cloud', this)">تخزين سحابي</button>
-                        <button class="cat-tab" onclick="selectCategory('learning', this)">تعليم</button>
-                        <button class="cat-tab" onclick="selectCategory('social', this)">سوشيال</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Skeleton Loader Row (hidden after load) -->
-            <div id="skeletonGrid" class="digital-services-grid skeleton-visible"
-                style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px; margin-bottom:10px;">
-                <div class="skeleton-card">
-                    <div class="skeleton-icon"></div>
-                    <div class="skeleton-line w70"></div>
-                    <div class="skeleton-line w50"></div>
-                    <div class="skeleton-line w60"></div>
-                </div>
-                <div class="skeleton-card">
-                    <div class="skeleton-icon"></div>
-                    <div class="skeleton-line w70"></div>
-                    <div class="skeleton-line w50"></div>
-                    <div class="skeleton-line w60"></div>
-                </div>
-                <div class="skeleton-card">
-                    <div class="skeleton-icon"></div>
-                    <div class="skeleton-line w70"></div>
-                    <div class="skeleton-line w50"></div>
-                    <div class="skeleton-line w60"></div>
-                </div>
-                <div class="skeleton-card">
-                    <div class="skeleton-icon"></div>
-                    <div class="skeleton-line w70"></div>
-                    <div class="skeleton-line w50"></div>
-                    <div class="skeleton-line w60"></div>
-                </div>
-                <div class="skeleton-card">
-                    <div class="skeleton-icon"></div>
-                    <div class="skeleton-line w70"></div>
-                    <div class="skeleton-line w50"></div>
-                    <div class="skeleton-line w60"></div>
-                </div>
-                <div class="skeleton-card">
-                    <div class="skeleton-icon"></div>
-                    <div class="skeleton-line w70"></div>
-                    <div class="skeleton-line w50"></div>
-                    <div class="skeleton-line w60"></div>
-                </div>
-            </div>
-
-            <!-- Real Products Grid -->
-            <div class="digital-services-grid" id="marketGrid"
-                style="display:none; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:20px;">
-
-                <!-- ===== AI TOOLS ===== -->
-                <div class="digi-card" data-category="ai" data-title="ChatGPT Plus"
-                    style="--brand-glow: rgba(16,163,127,0.5);">
-                    <span class="card-badge hot">الأكثر طلباً</span>
-                    <div class="digi-glow" style="background: rgba(16,163,127,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg" alt="ChatGPT"
-                            loading="lazy">
-                    </div>
-                    <h3>ChatGPT Plus</h3>
-                    <p>GPT-4o • توليد صور • بلا حدود</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">GPT-4o مع توليد الصور وتحليل الملفات بلا قيود</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('ChatGPT Plus', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('ChatGPT Plus', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('ChatGPT Plus', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="ai" data-title="Grok AI"
-                    style="--brand-glow: rgba(130,80,255,0.5);">
-                    <span class="card-badge new">جديد</span>
-                    <div class="digi-glow" style="background: rgba(130,80,255,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/x/ffffff" alt="Grok AI" loading="lazy">
-                    </div>
-                    <h3>Grok AI (X)</h3>
-                    <p>أقوى AI من منصة X • تحليل ذكي فائق</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">Grok 2 من إيلون ماسك مع وصول لبيانات X مباشرة</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Grok AI', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Grok AI', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Grok AI', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="ai" data-title="Gemini Advanced"
-                    style="--brand-glow: rgba(66,133,244,0.5);">
-                    <div class="digi-glow" style="background: rgba(66,133,244,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg"
-                            alt="Gemini" loading="lazy">
-                    </div>
-                    <h3>Gemini Advanced</h3>
-                    <p>Ultra 1.5 • ملفات • صور • Vision</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">نموذج Google الأقوى مع 1TB تخزين وتحليل الصور</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Gemini Advanced', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Gemini Advanced', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Gemini Advanced', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="ai" data-title="Claude Pro"
-                    style="--brand-glow: rgba(217,119,87,0.5);">
-                    <div class="digi-glow" style="background: rgba(217,119,87,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/anthropic/D97757" alt="Claude" loading="lazy">
-                    </div>
-                    <h3>Claude Pro</h3>
-                    <p>Sonnet • ملفات طويلة • كود احترافي</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">Claude 3.5 Sonnet الأفضل للتحليل والكتابة الأدبية</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Claude Pro', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Claude Pro', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Claude Pro', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="ai" data-title="Perplexity AI"
-                    style="--brand-glow: rgba(32,191,255,0.5);">
-                    <span class="card-badge new">جديد</span>
-                    <div class="digi-glow" style="background: rgba(32,191,255,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/perplexity/1FB8CD" alt="Perplexity" loading="lazy">
-                    </div>
-                    <h3>Perplexity Pro</h3>
-                    <p>بحث ذكي • مصادر حية • تقارير</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">محرك بحث AI يجمع كل المصادر ويلخصها فوراً</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Perplexity Pro', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Perplexity Pro', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Perplexity Pro', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="ai" data-title="Midjourney"
-                    style="--brand-glow: rgba(255,255,255,0.3);">
-                    <span class="card-badge limited">محدود</span>
-                    <div class="digi-glow" style="background: rgba(255,255,255,0.2);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e6/Midjourney_Emblem.png"
-                            alt="Midjourney" loading="lazy"
-                            onerror="this.src='https://cdn.simpleicons.org/midjourney/ffffff'">
-                    </div>
-                    <h3>Midjourney V6</h3>
-                    <p>توليد صور احترافي • عبر Discord</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">أقوى مولد صور بالذكاء الاصطناعي في العالم V6</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Midjourney', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Midjourney', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Midjourney', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <!-- ===== ENTERTAINMENT ===== -->
-                <div class="digi-card" data-category="entertainment" data-title="Netflix"
-                    style="--brand-glow: rgba(229,9,20,0.5);">
-                    <span class="card-badge hot">الأكثر مبيعاً</span>
-                    <div class="digi-glow" style="background: rgba(229,9,20,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/netflix/E50914" alt="Netflix" loading="lazy">
-                    </div>
-                    <h3>Netflix Premium</h3>
-                    <p>4K UHD • شاشة خاصة • 190 دولة</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">نتفليكس بريميوم 4K شاشة خاصة بدون مشاركة</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Netflix', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Netflix', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Netflix', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="entertainment" data-title="Disney+"
-                    style="--brand-glow: rgba(17,60,207,0.5);">
-                    <div class="digi-glow" style="background: rgba(17,60,207,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/disneyplus/113CCF" alt="Disney+" loading="lazy"
-                            onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg'">
-                    </div>
-                    <h3>Disney+</h3>
-                    <p>Marvel • Star Wars • Pixar • 4K</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">كل أفلام ومسلسلات مارفل وسترواورز وديزني الأصلية</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Disney+', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Disney+', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Disney+', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="entertainment" data-title="Prime Video"
-                    style="--brand-glow: rgba(0,168,225,0.5);">
-                    <div class="digi-glow" style="background: rgba(0,168,225,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/primevideo/00A8E1" alt="Prime Video" loading="lazy"
-                            onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/1/11/Amazon_Prime_Video_logo.svg'">
-                    </div>
-                    <h3>Prime Video</h3>
-                    <p>أفلام حصرية • أمازون ستوديو</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">مكتبة أمازون الضخمة مع إنتاجات حصرية بجودة 4K</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Prime Video', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Prime Video', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Prime Video', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <!-- ===== MUSIC ===== -->
-                <div class="digi-card" data-category="music" data-title="Spotify"
-                    style="--brand-glow: rgba(30,215,96,0.5);">
-                    <span class="card-badge hot">عرض خاص</span>
-                    <div class="digi-glow" style="background: rgba(30,215,96,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/spotify/1DB954" alt="Spotify" loading="lazy">
-                    </div>
-                    <h3>Spotify Premium</h3>
-                    <p>بلا إعلانات • تحميل • جودة عالية</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">سبوتيفاي بريميوم حساب خاص بجودة 320kbps</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Spotify', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Spotify', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Spotify', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="music" data-title="Apple Music"
-                    style="--brand-glow: rgba(250,36,60,0.5);">
-                    <div class="digi-glow" style="background: rgba(250,36,60,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/applemusic/FC3C44" alt="Apple Music" loading="lazy">
-                    </div>
-                    <h3>Apple Music</h3>
-                    <p>Lossless • Spatial Audio • 100M أغنية</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">جودة صوت Lossless مع صوت فضائي Spatial Audio</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Apple Music', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Apple Music', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Apple Music', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <!-- ===== DESIGN ===== -->
-                <div class="digi-card" data-category="design" data-title="Canva Pro"
-                    style="--brand-glow: rgba(0,196,204,0.5);">
-                    <span class="card-badge hot">الأهم</span>
-                    <div class="digi-glow" style="background: rgba(0,196,204,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8ZGVmcz4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0iY2ciIHgxPSIwIiB5MT0iMCIgeDI9IjEiIHkyPSIxIj4KICAgICAgPHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzdCMkZGNyIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjUwJSIgc3RvcC1jb2xvcj0iIzAwQzRDQyIvPgogICAgICA8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMwMEM0Q0MiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjUwIiBmaWxsPSJ1cmwoI2NnKSIvPgogIDx0ZXh0IHg9IjUwIiB5PSI2NyIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNTIiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QzwvdGV4dD4KPC9zdmc+"
-                            alt="Canva" loading="lazy"
-                            onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/0/08/Canva_icon_2021.svg'">
-                    </div>
-                    <h3>Canva Pro</h3>
-                    <p>قوالب Pro • Brand Kit • خلفيات AI</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">كانفا برو مع Brand Kit وإزالة خلفيات AI ومكتبة ضخمة</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Canva Pro', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Canva Pro', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Canva Pro', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="design" data-title="Adobe Creative Cloud"
-                    style="--brand-glow: rgba(255,0,0,0.5);">
-                    <div class="digi-glow" style="background: rgba(255,0,0,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Adobe_Creative_Cloud_rainbow_icon.svg"
-                            alt="Adobe CC" loading="lazy"
-                            onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/4/4c/Adobe_Creative_Cloud_rainbow_icon.svg'">
-                    </div>
-                    <h3>Adobe CC (كل التطبيقات)</h3>
-                    <p>Photoshop • Premiere • Illustrator</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">كل تطبيقات أدوبي بما فيها Premiere و After Effects</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Adobe CC', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Adobe CC', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Adobe CC', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="design" data-title="CapCut Pro"
-                    style="--brand-glow: rgba(255,255,255,0.25);">
-                    <span class="card-badge new">جديد</span>
-                    <div class="digi-glow" style="background: rgba(255,255,255,0.2);"></div>
-                    <div class="digi-icon brand-icon" style="background: transparent; border: none;">
-                        <!-- CapCut official logo: dark bg + CC bracket marks -->
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
-                          <!-- Black rounded square background -->
-                          <rect width="100" height="100" rx="22" fill="#000000"/>
-                          <!-- Left bracket "C" shape -->
-                          <path d="M22 28 Q14 28 14 38 L14 62 Q14 72 22 72 L30 72 L30 64 L24 64 Q22 64 22 62 L22 38 Q22 36 24 36 L30 36 L30 28 Z" fill="white"/>
-                          <!-- Right bracket reversed "C" shape -->
-                          <path d="M78 28 Q86 28 86 38 L86 62 Q86 72 78 72 L70 72 L70 64 L76 64 Q78 64 78 62 L78 38 Q78 36 76 36 L70 36 L70 28 Z" fill="white"/>
-                          <!-- Center vertical cut line -->
-                          <rect x="47" y="20" width="6" height="60" rx="3" fill="white"/>
-                        </svg>
-                    </div>
-                    <h3>CapCut Pro</h3>
-                    <p>مونتاج AI • إزالة خلفية • ريلز</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">كاب كات برو مع أدوات AI للمونتاج الاحترافي للريلز</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('CapCut Pro', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('CapCut Pro', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('CapCut Pro', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="design" data-title="Envato Elements"
-                    style="--brand-glow: rgba(82,196,26,0.5);">
-                    <span class="card-badge new">جديد</span>
-                    <div class="digi-glow" style="background: rgba(82,196,26,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/envato/81B441" alt="Envato" loading="lazy">
-                    </div>
-                    <h3>Envato Elements</h3>
-                    <p>ملايين الأصول • قوالب • فيديو • صور</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">Envato Elements: ملايين ملفات الديزاين بترخيص تجاري</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Envato Elements', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Envato Elements', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Envato Elements', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <!-- ===== PRODUCTIVITY ===== -->
-                <div class="digi-card" data-category="productivity" data-title="Microsoft 365"
-                    style="--brand-glow: rgba(216,59,1,0.5);">
-                    <div class="digi-glow" style="background: rgba(216,59,1,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj4KICA8cmVjdCB4PSI1IiB5PSI1IiB3aWR0aD0iNDIiIGhlaWdodD0iNDIiIHJ4PSI0IiBmaWxsPSIjRjI1MDIyIi8+CiAgPHJlY3QgeD0iNTMiIHk9IjUiIHdpZHRoPSI0MiIgaGVpZ2h0PSI0MiIgcng9IjQiIGZpbGw9IiM3RkJBMDAiLz4KICA8cmVjdCB4PSI1IiB5PSI1MyIgd2lkdGg9IjQyIiBoZWlnaHQ9IjQyIiByeD0iNCIgZmlsbD0iIzAwQTRFRiIvPgogIDxyZWN0IHg9IjUzIiB5PSI1MyIgd2lkdGg9IjQyIiBoZWlnaHQ9IjQyIiByeD0iNCIgZmlsbD0iI0ZGQjkwMCIvPgo8L3N2Zz4="
-                            alt="Microsoft 365" loading="lazy">
-                    </div>
-                    <h3>Microsoft 365</h3>
-                    <p>5 أجهزة • 1TB OneDrive • Copilot AI</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">Word, Excel, PowerPoint مع Copilot AI وOneDrive 1TB</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Microsoft 365', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Microsoft 365', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Microsoft 365', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="productivity" data-title="Notion AI"
-                    style="--brand-glow: rgba(255,255,255,0.25);">
-                    <div class="digi-glow" style="background: rgba(255,255,255,0.2);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/notion/ffffff" alt="Notion" loading="lazy">
-                    </div>
-                    <h3>Notion Plus + AI</h3>
-                    <p>مساحة لامحدودة • AI مدمج • Team</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">Notion Plus مع AI مدمج لكتابة الملاحظات والمشاريع</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Notion AI', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Notion AI', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Notion AI', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <!-- ===== GAMING ===== -->
-                <div class="digi-card" data-category="gaming" data-title="Xbox Game Pass"
-                    style="--brand-glow: rgba(16,124,16,0.5);">
-                    <div class="digi-glow" style="background: rgba(16,124,16,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/f/f9/Xbox_one_logo.svg" alt="Xbox"
-                            loading="lazy"
-                            onerror="this.src='https://upload.wikimedia.org/wikipedia/commons/f/f9/Xbox_one_logo.svg'">
-                    </div>
-                    <h3>Xbox Game Pass Ultimate</h3>
-                    <p>400+ لعبة • PC & Console • EA Play</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">مئات الألعاب للكمبيوتر والكونسول مع EA Play مجاناً</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Xbox Game Pass', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Xbox Game Pass', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Xbox Game Pass', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="gaming" data-title="PlayStation Plus"
-                    style="--brand-glow: rgba(0,67,156,0.5);">
-                    <div class="digi-glow" style="background: rgba(0,67,156,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/playstation/003791" alt="PlayStation" loading="lazy">
-                    </div>
-                    <h3>PlayStation Plus</h3>
-                    <p>Extra • Premium • ألعاب مجانية شهرية</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">PS Plus Extra مع مكتبة ألعاب ضخمة وLive العب أونلاين</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('PlayStation Plus', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('PlayStation Plus', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('PlayStation Plus', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="gaming" data-title="Steam"
-                    style="--brand-glow: rgba(26,159,255,0.5);">
-                    <span class="card-badge new">جديد</span>
-                    <div class="digi-glow" style="background: rgba(26,159,255,0.4);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/steam/ffffff" alt="Steam" loading="lazy">
-                    </div>
-                    <h3>شراء ألعاب Steam</h3>
-                    <p>أي لعبة تختارها • تحويل للحساب</p>
-                    <div class="digi-price">حسب اللعبة</div>
-                    <div class="digi-tooltip">نشتري لك أي لعبة من متجر Steam ونرسلها لحسابك</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Steam Games', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Steam Games', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Steam Games', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <!-- ===== CLOUD ===== -->
-                <div class="digi-card" data-category="cloud" data-title="Google One"
-                    style="--brand-glow: rgba(66,133,244,0.5);">
-                    <div class="digi-glow" style="background: rgba(66,133,244,0.4);"></div>
-                    <div class="digi-icon brand-icon" style="background: transparent; border: none;">
-                        <!-- Google Drive official multicolor SVG -->
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 87.3 78" width="60" height="54">
-                          <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-                          <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-                          <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
-                          <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-                          <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-                          <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
-                        </svg>
-                    </div>
-                    <h3>Google One Drive</h3>
-                    <p>100GB → 2TB • مشاركة عائلية</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">Google One من 100GB إلى 2TB مضافة لحسابك</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Google One', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Google One', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Google One', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <!-- ===== LEARNING ===== -->
-                <div class="digi-card" data-category="learning" data-title="Udemy"
-                    style="--brand-glow: rgba(164,53,240,0.5);">
-                    <div class="digi-glow" style="background: rgba(164,53,240,0.4);"></div>
-                    <div class="digi-icon brand-icon" style="background: transparent; border: none;">
-                        <!-- Udemy official inline SVG - white bg pill with purple U -->
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64">
-                          <rect width="100" height="100" rx="22" fill="#A435F0"/>
-                          <text x="50" y="72" font-family="Arial Black, Arial, sans-serif" font-size="60"
-                                font-weight="900" fill="white" text-anchor="middle">U</text>
-                        </svg>
-                    </div>
-                    <h3>شراء كورسات Udemy</h3>
-                    <p>أي كورس تختاره • وصول مدى الحياة</p>
-                    <div class="digi-price">حسب الكورس</div>
-                    <div class="digi-tooltip">نشتري لك أي كورس على Udemy بأسعار حقيقية</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Udemy Course', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Udemy Course', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Udemy Course', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <!-- ===== SOCIAL ===== -->
-                <div class="digi-card" data-category="social" data-title="Meta Verified توثيق"
-                    style="--brand-glow: rgba(85,178,255,0.5);">
-                    <div class="digi-glow" style="background: rgba(85,178,255,0.4);"></div>
-                    <div class="digi-icon brand-icon" style="background: transparent; border: none;">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="64" height="64" style="filter: drop-shadow(0 0 12px rgba(85,178,255,0.7));">
-                          <defs>
-                            <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stop-color="#60C8FF"/>
-                              <stop offset="100%" stop-color="#1877F2"/>
-                            </linearGradient>
-                          </defs>
-                          <!-- Star/badge outer shape (12-pointed) -->
-                          <path d="
-                            M50 5
-                            L57 17 L70 12 L71 26 L84 26 L81 39 L94 44 L87 55
-                            L95 65 L83 68 L83 82 L70 79 L63 91 L50 85
-                            L37 91 L30 79 L17 82 L17 68 L5 65
-                            L13 55 L6 44 L19 39 L16 26 L29 26
-                            L30 12 L43 17 Z
-                          " fill="url(#badgeGrad)"/>
-                          <!-- Checkmark -->
-                          <polyline points="33,50 44,62 67,38"
-                            fill="none" stroke="white" stroke-width="7"
-                            stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </div>
-                    <h3>توثيق Meta Verified</h3>
-                    <p>العلامة الزرقاء • Facebook & Instagram</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">توثيق Meta الرسمي للحصول على العلامة الزرقاء</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Meta Verified', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Meta Verified', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Meta Verified', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="social" data-title="Snapchat Plus"
-                    style="--brand-glow: rgba(255,252,0,0.5);">
-                    <div class="digi-glow" style="background: rgba(255,252,0,0.35);"></div>
-                    <div class="digi-icon brand-icon">
-                        <img src="https://cdn.simpleicons.org/snapchat/FFFC00" alt="Snapchat" loading="lazy">
-                    </div>
-                    <h3>Snapchat+</h3>
-                    <p>ميزات حصرية • Badge • Story Rewatch</p>
-                    <div class="digi-price">حسب الباقة</div>
-                    <div class="digi-tooltip">سناب بلس مع كل الميزات الحصرية والشارة المميزة</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Snapchat Plus', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Snapchat Plus', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Snapchat Plus', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-                <div class="digi-card" data-category="social" data-title="Social Media Boost متابعين"
-                    style="--brand-glow: rgba(225,48,108,0.5);">
-                    <div class="digi-glow"
-                        style="background: linear-gradient(135deg, rgba(225,48,108,0.4), rgba(29,161,242,0.3));"></div>
-
-                    <!-- 3 Separate platform icons in a row -->
-                    <div
-                        style="display:flex; gap:10px; align-items:center; justify-content:center; margin-bottom:4px; position:relative; z-index:1;">
-                        <!-- Instagram -->
-                        <div style="width:50px; height:50px; border-radius:14px; background:rgba(225,48,108,0.12); border:1px solid rgba(225,48,108,0.3); display:flex; align-items:center; justify-content:center; transition: transform 0.3s ease;"
-                            onmouseover="this.style.transform='scale(1.15)'"
-                            onmouseout="this.style.transform='scale(1)'">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg"
-                                alt="Instagram" loading="lazy" style="width:32px; height:32px; object-fit:contain;">
-                        </div>
-                        <!-- TikTok -->
-                        <div style="width:50px; height:50px; border-radius:14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); display:flex; align-items:center; justify-content:center; transition: transform 0.3s ease;"
-                            onmouseover="this.style.transform='scale(1.15)'"
-                            onmouseout="this.style.transform='scale(1)'">
-                            <img src="https://cdn.simpleicons.org/tiktok/ffffff" alt="TikTok" loading="lazy"
-                                style="width:30px; height:30px; object-fit:contain;">
-                        </div>
-                        <!-- Facebook -->
-                        <div style="width:50px; height:50px; border-radius:14px; background:rgba(24,119,242,0.12); border:1px solid rgba(24,119,242,0.3); display:flex; align-items:center; justify-content:center; transition: transform 0.3s ease;"
-                            onmouseover="this.style.transform='scale(1.15)'"
-                            onmouseout="this.style.transform='scale(1)'">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b8/2021_Facebook_icon.svg"
-                                alt="Facebook" loading="lazy" style="width:32px; height:32px; object-fit:contain;">
-                        </div>
-                    </div>
-
-                    <h3>دعم السوشيال ميديا</h3>
-                    <p>متابعين • لايكات • مشاهدات</p>
-                    <div class="digi-price">حسب العدد</div>
-                    <div class="digi-tooltip">نموّ حقيقي لتيك توك، إنستغرام، فيسبوك - متابعين ولايكات</div>
-                    <div class="digi-actions">
-                        <button onclick="orderService('Social Media Support', 'whatsapp')" class="btn btn-digi"><i
-                                class="fa-brands fa-whatsapp" style="color:#25d366;"></i></button>
-                        <button onclick="orderService('Social Media Support', 'messenger')" class="btn btn-digi"><i
-                                class="fa-brands fa-facebook-messenger" style="color:#0084ff;"></i></button>
-                        <button onclick="orderService('Social Media Support', 'telegram')" class="btn btn-digi"><i
-                                class="fa-brands fa-telegram" style="color:#0088cc;"></i></button>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-        <!-- Market Section Ends Here -->
-
-        <!-- Game Top-up Section -->
-        <div id="gameTopupWrapper" style="display: block;">
-        <div class="section-label-bar " style="margin-top: 60px;">
-            <span class="section-label-dot"></span>
-            <h2 class="section-title gradient-text glow" style="margin:0; font-size:2rem;">شحن الألعاب 🎮</h2>
-            <span class="section-label-dot"></span>
-        </div>
-        <p class="text-center text-muted " style="margin-bottom: 30px; font-size: 1.1rem;">
-            احصل على شحن فوري وآمن لحسابك
-        </p>
-
-        <section id="game-topup" class="game-topup-section ">
-            <div class="game-cards-container">
-                <!-- Free Fire Card -->
-                <div class="game-card ff-card box-glass">
-                    <div class="game-card-bg"></div>
-                    <div class="game-image-wrapper">
-                        <img src="https://play-lh.googleusercontent.com/cxEHS5dk6Cu0U94SiQBIXXXI39W-7nKqrBa5a3oPQNl6i78psvmzy2diDSK_dviH57P21gLW8-CgrKX9vG3naQk=w240-h480-rw" alt="Free Fire" class="game-logo">
-                    </div>
-                    <div class="game-content">
-                        <h3 class="game-title">🔥 Free Fire</h3>
-                        <ul class="game-features">
-                            <li><i class="fa-solid fa-bolt"></i> شحن جواهر بسرعة</li>
-                            <li><i class="fa-solid fa-lock-open"></i> بدون الحاجة لكلمة المرور</li>
-                            <li><i class="fa-solid fa-id-card"></i> فقط أدخل ID الخاص بك</li>
-                        </ul>
-                        <div class="game-form">
-                            <div class="input-group">
-                                <label for="ff-id">ID اللاعب:</label>
-                                <div class="id-input-wrapper">
-                                    <input type="text" id="ff-id" placeholder="أدخل الـ ID" oninput="verifyGamePlayerId('ff')">
-                                    <button class="verify-btn" onclick="verifyGamePlayerId('ff')" title="تحقق من الاسم"><i class="fa-solid fa-magnifying-glass"></i></button>
-                                </div>
-                                <div id="ff-player-name" class="player-name-display hidden"></div>
-                            </div>
-                            <div class="input-group">
-                                <label for="ff-package">اختر الباقة (جواهر 💎):</label>
-                                <select id="ff-package">
-                                    <option value="100">100 جوهرة</option>
-                                    <option value="210">210 جوهرة</option>
-                                    <option value="530">530 جوهرة</option>
-                                    <option value="1080">1080 جوهرة</option>
-                                    <option value="2200">2200 جوهرة</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-ff buy-now-btn" onclick="buyGameTopup('Free Fire')">
-                                <i class="fa-solid fa-cart-shopping"></i> اشحن Free Fire
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- PUBG Mobile Card -->
-                <div class="game-card pubg-card box-glass">
-                    <div class="game-card-bg"></div>
-                    <div class="game-image-wrapper">
-                        <img src="https://play-lh.googleusercontent.com/zCSGnBtZk0Lmp1BAbyaZfLktDzHmC6oke67qzz3G1lBegAF2asyt5KzXOJ2PVdHDYkU=w240-h480-rw" alt="PUBG Mobile" class="game-logo">
-                    </div>
-                    <div class="game-content">
-                        <h3 class="game-title">🔫 PUBG Mobile</h3>
-                        <ul class="game-features">
-                            <li><i class="fa-solid fa-bolt"></i> شحن UC بشكل فوري</li>
-                            <li><i class="fa-solid fa-shield-halved"></i> آمن 100%</li>
-                            <li><i class="fa-solid fa-globe"></i> دعم جميع السيرفرات</li>
-                        </ul>
-                        <div class="game-form">
-                            <div class="input-group">
-                                <label for="pubg-id">ID اللاعب:</label>
-                                <div class="id-input-wrapper">
-                                    <input type="text" id="pubg-id" placeholder="أدخل الـ ID" oninput="verifyGamePlayerId('pubg')">
-                                    <button class="verify-btn" onclick="verifyGamePlayerId('pubg')" title="تحقق من الاسم"><i class="fa-solid fa-magnifying-glass"></i></button>
-                                </div>
-                                <div id="pubg-player-name" class="player-name-display hidden"></div>
-                            </div>
-                            <div class="input-group">
-                                <label for="pubg-package">اختر الباقة (UC 💵):</label>
-                                <select id="pubg-package">
-                                    <option value="60">60 UC</option>
-                                    <option value="325">325 UC</option>
-                                    <option value="660">660 UC</option>
-                                    <option value="1800">1800 UC</option>
-                                    <option value="3850">3850 UC</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-pubg buy-now-btn" onclick="buyGameTopup('PUBG Mobile')">
-                                <i class="fa-solid fa-cart-shopping"></i> اشحن PUBG Mobile
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- eFootball 2026 Card -->
-                <div class="game-card efootball-card box-glass">
-                    <div class="game-card-bg"></div>
-                    <div class="game-image-wrapper" style="padding-top: 0; width: 100%;">
-                        <img src="assets/efootball.png" alt="eFootball 2026" class="game-logo" style="width: 100%; height: 160px; object-fit: cover; border-radius: 0; border: none; box-shadow: none; margin-bottom: 0;">
-                    </div>
-                    <div class="game-content">
-                        <h3 class="game-title">⚽ eFootball™ 2026</h3>
-                        <ul class="game-features">
-                            <li><i class="fa-solid fa-bolt"></i> شحن كوينز بسرعة</li>
-                            <li><i class="fa-solid fa-lock-open"></i> عن طريق Konami ID</li>
-                            <li><i class="fa-solid fa-shield-halved"></i> آمن ومضمون 100%</li>
-                        </ul>
-                        <div class="game-form">
-                            <div class="input-group">
-                                <label for="efootball-id">Konami ID:</label>
-                                <div class="id-input-wrapper">
-                                    <input type="text" id="efootball-id" placeholder="أدخل Konami ID">
-                                </div>
-                            </div>
-                            <div class="input-group">
-                                <label for="efootball-package">اختر الباقة (Coins 🟡):</label>
-                                <select id="efootball-package">
-                                    <option value="130">130 Coins</option>
-                                    <option value="520">520 Coins</option>
-                                    <option value="1040">1040 Coins</option>
-                                    <option value="2130">2130 Coins</option>
-                                    <option value="3250">3250 Coins</option>
-                                    <option value="5800">5800 Coins</option>
-                                    <option value="12000">12000 Coins</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-efootball buy-now-btn" onclick="buyGameTopup('eFootball 2026')">
-                                <i class="fa-solid fa-cart-shopping"></i> اشحن eFootball 2026
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="game-info-box box-glass">
-                <div class="game-info-item">
-                    <i class="fa-solid fa-credit-card text-blue" style="margin-top: 4px;"></i>
-                    <div>
-                        <strong>الدفع:</strong>
-                        <span>الدفع بالدينار الجزائري</span>
-                    </div>
-                </div>
-                <div class="game-info-item">
-                    <i class="fa-solid fa-bolt text-orange" style="margin-top: 4px;"></i>
-                    <div>
-                        <strong>التفعيل:</strong>
-                        <span>فوري بعد الدفع</span>
-                    </div>
-                </div>
-                <div class="game-info-item">
-                    <i class="fa-solid fa-envelope text-green" style="margin-top: 4px;"></i>
-                    <div>
-                        <strong>ملاحظة:</strong>
-                        <span>تأكد من إدخال ID صحيح، نحن غير مسؤولين عن الأخطاء.</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-        </div>
-
-        <!-- Universal Digital Services CTA Banner -->
-        <div class="digital-cta-banner box-glass "
-            style="margin: 20px auto 80px auto; max-width: 900px; padding: 40px 20px; text-align: center; border-radius: 20px;">
-            <h3 style="font-size: 1.6rem; color: var(--text-main); margin-bottom: 15px;">هل تبحث عن اشتراك محدد؟ 🎬💻
-            </h3>
-            <p style="font-size: 1.15rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 30px;">
-                نوفر تقريباً جميع الاشتراكات الرقمية!<br>
-                للاستفسار عن أي اشتراك اتصل بنا عبر الفيسبوك أو الواتساب وسنقوم بتوفيره لك فوراً.
-            </p>
-            <div class="cta-actions" style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
-                <button class="btn btn-digi" onclick="orderService('استفسار عن اشتراك رقمي خاص', 'whatsapp')"
-                    style="padding: 14px 20px; border-color: rgba(37, 211, 102, 0.5);"><i class="fa-brands fa-whatsapp"
-                        style="color: #25d366;"></i> واتساب</button>
-                <button class="btn btn-digi" onclick="orderService('استفسار عن اشتراك رقمي خاص', 'messenger')"
-                    style="padding: 14px 20px; border-color: rgba(0, 132, 255, 0.5);"><i
-                        class="fa-brands fa-facebook-messenger" style="color: #0084ff;"></i> ماسنجر</button>
-                <button class="btn btn-digi" onclick="orderService('استفسار عن اشتراك رقمي خاص', 'telegram')"
-                    style="padding: 14px 20px; border-color: rgba(0, 136, 204, 0.5);"><i class="fa-brands fa-telegram"
-                        style="color: #0088cc;"></i> تيليجرام</button>
-            </div>
-        </div>
-
-
-        <!-- Features Section -->
-        <!-- Features Section -->
-        <h2 class="section-title">مميزات Kouki Shop</h2>
-        <section id="features" class="features">
-            <div class="feature-card box-glass">
-                <div class="feature-icon"><i class="fa-solid fa-globe"></i></div>
-                <h3 class="feature-title">🌍 متاجر عالمية</h3>
-                <p>الصين، اليابان، فرنسا، امريكا</p>
-            </div>
-            <div class="feature-card box-glass">
-                <div class="feature-icon"><i class="fa-solid fa-money-bill-wave"></i></div>
-                <h3 class="feature-title">💰 دفع بالدينار</h3>
-                <p>دفع بالدينار بدون الحاجة لبطاقة بنكية دولية</p>
-            </div>
-            <div class="feature-card box-glass">
-                <div class="feature-icon"><i class="fa-solid fa-truck-fast"></i></div>
-                <h3 class="feature-title">🚚 توصيل للدار</h3>
-                <p>15-35 يوم والتسليم من La Poste</p>
-            </div>
-            <div class="feature-card box-glass">
-                <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
-                <h3 class="feature-title">🛡️ ثقة وضمان</h3>
-                <p>خبرة وضمان منذ 3 سنوات</p>
-            </div>
-        </section>
-
-        <!-- How It Works Section -->
-        <h2 class="section-title">خطوات الشراء (كيف تتسوق معنا؟)</h2>
-        <p class="text-center text-muted" style="margin-bottom: 40px; font-size: 1.1rem;">ماعليك غير ترسلنا الرابط وخلي
-            الباقي علينا 😊👌</p>
-        <section id="how" class="how-it-works">
-            <div class="steps-grid">
-                <div class="step-card box-glass">
-                    <div class="step-number">1</div>
-                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--primary);">🔍</div>
-                    <h3 style="margin-bottom: 10px;">اختر المنتج</h3>
-                    <p style="font-size: 0.95rem; color: var(--text-muted); font-weight: normal;">ادخل لموقع Aliexpress
-                        او اي موقع يدعم الشحن للجزائر</p>
-                </div>
-                <div class="step-card box-glass">
-                    <div class="step-number">2</div>
-                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--primary);">📱</div>
-                    <h3 style="margin-bottom: 10px;">ارسل الرابط</h3>
-                    <p style="font-size: 0.95rem; color: var(--text-muted); font-weight: normal;">ارسل لنا الرابط عبر
-                        بوت التيليجرام او فيسبوك</p>
-                </div>
-                <div class="step-card box-glass">
-                    <div class="step-number">3</div>
-                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--primary);">💳</div>
-                    <h3 style="margin-bottom: 10px;">ادفع CCP/Baridimob</h3>
-                    <p style="font-size: 0.95rem; color: var(--text-muted); font-weight: normal;">قم بالدفع والتأكيد عبر
-                        CCP او BARIDIMOB</p>
-                </div>
-                <div class="step-card box-glass">
-                    <div class="step-number">4</div>
-                    <div style="font-size: 2.5rem; margin-bottom: 15px; color: var(--primary);">📦</div>
-                    <h3 style="margin-bottom: 10px;">استلم طلبك</h3>
-                    <p style="font-size: 0.95rem; color: var(--text-muted); font-weight: normal;">يجيبهالك ساعي البريد
-                        للدار او تستلمها من أقرب مركز بريد</p>
-                </div>
-            </div>
-            <p class="text-center text-muted" style="margin-top: 30px; font-size: 1.1rem;">ملاحظة : كل المتاجر العالمية
-                تفرض الدفع المسبق، متجر <strong>Kouki Shop</strong> وسيط خدماتي بينكم وبين البائعين الاجانب 🌎</p>
-        </section>
-
-
-
-        <!-- Additional Services Section -->
-        <h2 class="section-title">خدمات إضافية (خدماتنا الأخرى)</h2>
-        <p class="text-center text-muted" style="margin-bottom: 40px; font-size: 1.1rem;">بالإضافة لخدمة الوساطة
-            التجارية يقدم لكم متجر Kouki Shop:</p>
-        <section class="features">
-            <div class="feature-card box-glass">
-                <div class="feature-icon"><i class="fa-solid fa-code"></i></div>
-                <h3 class="feature-title">🌐 انشاء المواقع</h3>
-                <p>انشاء المواقع وتصميم المتاجر الالكترونية</p>
-            </div>
-            <div class="feature-card box-glass">
-                <div class="feature-icon"><i class="fa-solid fa-rectangle-ad"></i></div>
-                <h3 class="feature-title">📢 عمل اعلانات</h3>
-                <p>اعلانات فايسبوك ممولة Sponsoring</p>
-            </div>
-            <div class="feature-card box-glass">
-                <div class="feature-icon"><i class="fa-solid fa-briefcase"></i></div>
-                <h3 class="feature-title">💼 خدمات Freelance</h3>
-                <p>خدمات Freelance متنوعة واحترافية</p>
-            </div>
-        </section>
-
-        <!-- Guarantees & Final CTA -->
-        <div class="guarantee-box">
-            <h3><i class="fa-solid fa-shield-halved"></i> الضمانات</h3>
-            <p style="font-size: 1.1rem; line-height: 1.8;">99% من الطرود تصل بشكل سليم لاصحابها ونسبة 1% تكون غالبا في
-                منتجات ثانوية.<br>وحتى اذا لم تصل، تقوم <strong>Kouki Shop</strong> بمعالجة الامر قصد تعويضكم 😍</p>
-        </div>
-
-        <!-- Contact Section -->
-        <h2 class="section-title">تواصل معنا المباشر</h2>
-        <p class="text-center text-muted" style="margin-bottom: 40px; font-size: 1.15rem;">نحن هنا لخدمتك عبر منصاتك
-            المفضلة للإجابة على جميع استفساراتك 💬</p>
-        <section class="contact-grid">
-            <a href="https://wa.me/0562208794" target="_blank" class="contact-card whatsapp">
-                <div class="icon-circle"><i class="fa-brands fa-whatsapp"></i></div>
-                <h3>واتساب</h3>
-                <p>0562208794</p>
-            </a>
-            <a href="https://www.instagram.com/abdelkarim_rem/" target="_blank" class="contact-card instagram">
-                <div class="icon-circle"><i class="fa-brands fa-instagram"></i></div>
-                <h3>إنستغرام</h3>
-                <p>@abdelkarim_rem</p>
-            </a>
-            <a href="https://t.me/BOOGEYMAN_DZ" target="_blank" class="contact-card phone"
-                style="border-bottom: 3px solid #0088cc;">
-                <div class="icon-circle" style="color: #0088cc;"><i class="fa-brands fa-telegram"></i></div>
-                <h3>تيليجرام</h3>
-                <p>@BOOGEYMAN_DZ</p>
-            </a>
-        </section>
-
-
-        <!-- Commission Table Section -->
-        <div class="commission-wrapper " style="margin: 60px auto 100px auto; max-width: 900px;"
-            id="commission">
-            <div class="box-glass p-0" style="border-radius: 20px; overflow: hidden; position: relative; padding: 0;">
-
-                <!-- Header -->
-                <div
-                    style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(15, 23, 42, 0.8)); padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <h2 style="font-size: 1.8rem; margin-bottom: 5px; color: var(--text-main); font-weight: 900;"><i
-                            class="fa-solid fa-scale-balanced"
-                            style="color: var(--secondary); margin-left: 10px;"></i>جدول العمولات</h2>
-                    <p style="color: var(--text-muted); font-size: 1rem; margin: 0;">أسعار شفافة • هيكل تسعير بسيط وعادل
-                    </p>
-                </div>
-
-                <!-- Grid Data -->
-                <div class="com-grid" style="padding: 25px;">
-                    <div class="com-item">
-                        <div class="com-price">تحت 3$</div>
-                        <div class="com-fee">100 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">3$ - 5$</div>
-                        <div class="com-fee">150 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">5$ - 11$</div>
-                        <div class="com-fee">300 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">11$ - 15$</div>
-                        <div class="com-fee">400 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">15$ - 18$</div>
-                        <div class="com-fee">500 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">18$ - 22$</div>
-                        <div class="com-fee">600 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">22$ - 25$</div>
-                        <div class="com-fee">700 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">25$ - 32$</div>
-                        <div class="com-fee">800 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">32$ - 38$</div>
-                        <div class="com-fee">900 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">38$ - 44$</div>
-                        <div class="com-fee">1000 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">44$ - 62$</div>
-                        <div class="com-fee">1200 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">62$ - 70$</div>
-                        <div class="com-fee">1300 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">70$ - 80$</div>
-                        <div class="com-fee">1500 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">80$ - 90$</div>
-                        <div class="com-fee">1700 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">90$ - 100$</div>
-                        <div class="com-fee">1900 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">100$ - 120$</div>
-                        <div class="com-fee">2100 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">120$ - 160$</div>
-                        <div class="com-fee">2300 د.ج</div>
-                    </div>
-                    <div class="com-item">
-                        <div class="com-price">160$ - 200$</div>
-                        <div class="com-fee">2500 د.ج</div>
-                    </div>
-                    <div class="com-item highlight">
-                        <div class="com-price">فوق 200$</div>
-                        <div class="com-fee">قابلة للتفاوض</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Final CTA -->
-        <div class="final-cta">
-            <h2 style="margin-bottom: 30px;">اذا مازال ماشريتش من هذي المتاجر راك مراطي بزاف 👇</h2>
-            <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
-                <a href="https://t.me/AliExpressdiscountsdzbot" target="_blank" class="btn btn-telegram large"
-                    style="max-width: 250px;">
-                    <i class="fa-brands fa-telegram"></i> 🤖 افتح البوت للطلب
-                </a>
-                <a href="https://www.facebook.com/XBHTHAGOAT/" target="_blank" class="btn btn-facebook large"
-                    style="max-width: 250px;">
-                    <i class="fa-brands fa-facebook"></i> للطلب عبر فيسبوك
-                </a>
-            </div>
-        </div>
-        <!-- About Us Section -->
-        <h2 class="section-title">من نحن (About Us)</h2>
-        <section class="about-us-section box-glass "
-            style="margin-bottom: 60px; padding: 40px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px;">
-            <img src="logo.png" alt="Kouki Shop Logo"
-                style="height: 120px; width: auto; object-fit: contain; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); background: rgba(255,255,255,0.95); padding: 15px 30px;">
-            <p
-                style="font-size: 1.25rem; color: var(--text-muted); line-height: 1.9; max-width: 800px; margin: 0 auto;">
-                <strong style="color: var(--primary); font-size: 1.6rem; display: block; margin-bottom: 15px;">متجر
-                    كوكي</strong>
-                ✅ تبحث عن وسيط يشتري لك من المتاجر الإلكترونية بالخارج؟<br>
-                الدفع يكون بالدينار الجزائري 🇩🇿<br><br>
-
-                <strong style="color: var(--secondary);">خدماتنا:</strong><br>
-                التسوق من الصين، اليابان، فرنسا، الولايات المتحدة، ألمانيا…<br><br>
-
-                مع <strong style="color: var(--primary);">#متجر_كوكي</strong> تقدر تشري كل ما تحب وتتسوق بسهولة وأمان
-                😍<br>
-                لا تحتاج بطاقة بنكية أو رصيد بالعملة الصعبة.
-            </p>
-            <div
-                style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.3); padding: 20px 30px; border-radius: 12px; margin-top: 15px;">
-                <h4 style="color: var(--secondary); font-size: 1.25rem; margin-bottom: 12px;"><i
-                        class="fa-solid fa-map-location-dot"></i> مقرنا الرئيسي:</h4>
-                <p style="font-size: 1.1rem; color: var(--text-main); margin: 0; direction: ltr; font-weight: 600;">
-                    Wilaya Khenchela, Commune Kais, City El Anouar, Apt 104</p>
-                <p style="font-size: 1.1rem; color: var(--text-main); margin: 5px 0 0 0; font-weight: 500;">ولاية خنشلة،
-                    بلدية قايس، حي الأنوار، شقة 104</p>
-            </div>
-        </section>
-    </main>
-
-    <section class="sec" id="reviews">
-  <div class="con">
-    <div class="sh rv in"><div class="stag">⭐ التقييمات</div><h2 class="st">ماذا يقول <span class="ac">عملاؤنا</span></h2></div>
-    <div class="rsum rv in">
-      <div style="text-align:center;min-width:90px;">
-        <div class="rsn" id="avgn">5.0</div>
-        <div class="rst" id="avgt">0 تقييم</div>
-      </div>
-    </div>
-    <div id="rvg" class="rvg">
-      <!-- Reviews injected via JS -->
-    </div>
-    
-    <div class="rvf rv in">
-      <h3>إضافة تقييم جديد للموقع 😍</h3>
-      <div class="spk">
-        <span class="sp" onclick="setRating(5)">★</span>
-        <span class="sp" onclick="setRating(4)">★</span>
-        <span class="sp" onclick="setRating(3)">★</span>
-        <span class="sp" onclick="setRating(2)">★</span>
-        <span class="sp" onclick="setRating(1)">★</span>
-      </div>
-      <div class="rvfg">
-        <div class="fg"><input type="text" id="rv-name" placeholder="الاسم الكامل"></div>
-        <div class="fg"><input type="text" id="rv-city" placeholder="الولاية"></div>
-        <div class="fg fu"><input type="text" id="rv-product" placeholder="المنتج الذي جربته؟ (مثال: شحن جواهر فري فاير أو منتج من علي إكسبريس)"></div>
-        <div class="fg fu"><textarea id="rv-text" placeholder="اكتب تقييمك بكل صراحة..."></textarea></div>
-      </div>
-      <button class="brv" onclick="submitReview()">إرسال التقييم ✓</button>
-      <div id="rvok">تم إرسال تقييمك بنجاح! سيتم عرضه قريباً.</div>
-      <div class="rv-stat" id="rv-error"></div>
-    </div>
-    
-  </div>
-</section>
-<footer class="container box-glass footer"
-        style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-        <p>© 2026 Kouki Shop. جميع الحقوق محفوظة.</p>
-        <div class="social-links" style="display: flex; gap: 15px;">
-            <a href="https://www.facebook.com/XBHTHAGOAT/" target="_blank"
-                style="color: var(--text); font-size: 1.5rem; transition: color 0.3s;"
-                onmouseover="this.style.color='#1877F2'" onmouseout="this.style.color='var(--text)'"
-                title="صفحتنا على فيسبوك">
-                <i class="fa-brands fa-facebook"></i>
-            </a>
-            <a href="https://t.me/BOOGEYMAN_DZ" target="_blank"
-                style="color: var(--text); font-size: 1.5rem; transition: color 0.3s;"
-                onmouseover="this.style.color='#0088cc'" onmouseout="this.style.color='var(--text)'"
-                title="تواصل معنا على تيليجرام">
-                <i class="fa-brands fa-telegram"></i>
-            </a>
-        </div>
-    </footer>
-
-    <script src="script.js"></script>
-<script>
-const $ = s => document.querySelector(s);
-const $$ = s => document.querySelectorAll(s);
-
-const als = $('#als'), ard = $('#ard'), anb = $('#anb'), aerr = $('#aerr');
-let currentProduct = null;
-
-async function doAn() {
-  const url = $('#purl').value.trim();
-  if(!url) return aerr.innerText = 'يرجى إدخال الرابط';
-  aerr.innerText = '';
-  anb.disabled = true; als.style.display = 'block'; ard.style.display = 'none';
-  $('#results-dashboard').classList.add('hidden');
-  $('#results-dashboard').style.display = 'none';
-  try {
-     const res = await fetch("https://netlify-mlhd.onrender.com/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-     });
-     const data = await res.json();
-     if(data.error) throw new Error(data.error);
-
-     currentProduct = {
-         title: data.title || 'منتج غير معروف',
-         price_usd: data.price_usd || 0,
-         price_dzd: data.price_dzd || 0,
-         url: url
-     };
-     
-     if (data.image) {
-         $('#product-img').src = data.image;
-     } else {
-         $('#product-img').src = 'logo.png';
-     }
-     
-     $('#res-title').innerText = data.title || 'جاري التحليل...';
-     
-     if (data.discount && data.discount > 0) {
-         $('#discount-badge').style.display = 'block';
-         $('#discount-badge').innerText = `OFF ${data.discount}%`;
-     } else {
-         $('#discount-badge').style.display = 'none';
-     }
-
-     $('#inv-base-dzd').innerText = data.base_dzd.toLocaleString();
-     $('#inv-usd').innerText = `$${data.price_usd}`;
-     $('#inv-commission').innerText = data.commission.toLocaleString();
-     $('#inv-total-dzd').innerText = data.price_dzd.toLocaleString();
-     
-     $('#final-dzd').innerText = data.price_dzd.toLocaleString();
-     $('#original-usd').innerText = `US $${data.orig_usd}`;
-     if (data.orig_usd <= data.price_usd) {
-         $('#original-usd').style.display = 'none';
-     } else {
-         $('#original-usd').style.display = 'inline';
-     }
-     
-     $('#note-base').innerText = data.base_dzd.toLocaleString();
-     $('#note-comm').innerText = data.commission.toLocaleString();
-
-     als.style.display = 'none';
-     const dashboard = $('#results-dashboard');
-     dashboard.style.display = 'block';
-     dashboard.classList.remove('hidden');
-     dashboard.style.opacity = '0';
-     setTimeout(() => {
-         dashboard.style.transition = 'opacity 0.6s ease-out';
-         dashboard.style.opacity = '1';
-     }, 50);
-  } catch(e) {
-     aerr.innerText = 'فشل التحليل.';
-     als.style.display = 'none';
-  } finally {
-     anb.disabled = false;
-  }
-}
-function ce() { $('#aerr').innerText = ''; }
-
-// --- Order Message Functions ---
-function getOrderTemplate() {
-    if (!currentProduct) return "مرحباً Kouki Shop، أود الاستفسار عن منتج.";
-    
-    return `طلب شراء جديد 🛍️
----------------------------
-📦 المنتج: ${currentProduct.title}
-💰 السعر: $${currentProduct.price_usd}
-💸 المجموع بالدينار: ${currentProduct.price_dzd.toLocaleString()} د.ج
-🔗 الرابط: ${currentProduct.url}
----------------------------
-أريد تأكيد هذا الطلب. كيف يمكنني الدفع؟`;
-}
-
-function orderNowFB() {
-    const msg = encodeURIComponent(getOrderTemplate());
-    window.open(`https://m.me/XBHTHAGOAT?text=${msg}`, '_blank');
-}
-
-function orderNowWhatsApp() {
-    const msg = encodeURIComponent(getOrderTemplate());
-    window.open(`https://wa.me/213562208794?text=${msg}`, '_blank');
-}
-
-function orderNowPersonalTG() {
-    const msg = encodeURIComponent(getOrderTemplate());
-    window.open(`https://t.me/BOOGEYMAN_DZ?text=${msg}`, '_blank');
-}
-
-function copyToClipboard() {
-    const text = getOrderTemplate();
-    navigator.clipboard.writeText(text).then(() => {
-        alert("✅ تم نسخ تفاصيل الطلب! يمكنك الآن لصقها في المحادثة.");
-    }).catch(err => {
-        alert("فشل في نسخ النص، يرجى المحاولة يدوياً.");
-    });
-}
-
-// Review System
-let curSt = 0;
-function setRating(s) { 
-  curSt = s;
-  $$('.sp').forEach((el, i) => {
-    el.classList.toggle('on', (5-i) <= s);
-  });
-}
-
-function escapeHtml(unsafe) {
-    return (unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-
-async function submitReview() {
-  const name = $('#rv-name').value;
-  const city = $('#rv-city').value;
-  const text = $('#rv-text').value;
-  const product = $('#rv-product').value;
-  if(!name || !text || !curSt) {
-      $('#rv-error').innerText = 'يرجى ملء الاسم والتقييم واختيار النجوم';
-      return;
-  }
-  $('#rv-error').innerText = '';
-  $('.brv').disabled = true;
-  $('.brv').innerText = 'جاري الإرسال...';
-  
-  try {
-     const res = await fetch("https://netlify-mlhd.onrender.com/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, city, text, rating: curSt, product })
-     });
-     if(!res.ok) throw new Error();
-     $('#rvok').style.display = 'block';
-     setTimeout(() => location.reload(), 2000);
-  } catch(e) {
-     $('#rv-error').innerText = 'حدث خطأ. حاول مجددا.';
-     $('.brv').disabled = false;
-     $('.brv').innerText = 'إرسال التقييم ✓';
-  }
-}
-
-async function loadReviews() {
-  try {
-    const res = await fetch("https://netlify-mlhd.onrender.com/api/comments");
-    const comments = await res.json();
-    let html = '';
-    let total = 0;
-    comments.forEach(c => {
-       total += c.rating;
-       const filled = '<span class="sf">★</span>'.repeat(c.rating);
-       const empty = '<span class="se">★</span>'.repeat(5 - c.rating);
-       html += '<div class="rvc"><div class="rvh"><div class="rvav" style="background:linear-gradient(135deg,#ff5500,#b33000);">';
-       html += escapeHtml(c.name.charAt(0)) + '</div><div><div class="rvn">' + escapeHtml(c.name) + '</div>';
-       html += '<div class="rvm">' + escapeHtml(c.city || 'الجزائر') + ' • ' + escapeHtml(c.date) + '</div></div></div>';
-       html += '<div class="rvs">' + filled + empty + '</div>';
-       html += '<div class="rvt">' + escapeHtml(c.text) + '</div>';
-       if(c.product) html += '<div class="rvtg">📦 ' + escapeHtml(c.product) + '</div>';
-       html += '<div class="rvv">✅ عميل موثق</div></div>';
-    });
-    if (comments.length) {
-       $('#rvg').innerHTML = html;
-       $('#avgn').innerText = (total / comments.length).toFixed(1);
-       $('#avgt').innerText = comments.length + " تقييم";
-    }
-  } catch(e) {}
-}
-
-document.addEventListener('DOMContentLoaded', loadReviews);
-</script>
-<!-- Floating Currency Calculator -->
-<div id="float-calc" style="position:fixed;bottom:30px;left:30px;z-index:9999;background:rgba(10, 10, 22, 0.9);backdrop-filter:blur(15px);border:1px solid var(--fire);padding:15px;border-radius:15px;box-shadow:0 10px 30px rgba(0,0,0,0.5);width:220px;transition:all 0.3s;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='none'">
-    <div style="font-weight:bold;margin-bottom:10px;font-size:0.9rem;display:flex;justify-content:space-between;align-items:center;">
-        <span><i class="fa-solid fa-calculator" style="color:var(--fire);"></i> حاسبة الدينار</span>
-        <button onclick="document.getElementById('float-calc').style.display='none'" style="background:none;border:none;color:var(--t3);cursor:pointer;"><i class="fa-solid fa-times"></i></button>
-    </div>
-    <div style="position:relative;margin-bottom:10px;">
-        <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--t2);font-family:'Outfit',sans-serif;">$</span>
-        <input type="number" id="calc-usd" placeholder="المبلغ بـ USD" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);padding:8px 10px 8px 30px;border-radius:8px;color:white;font-family:'Outfit',sans-serif;" oninput="document.getElementById('calc-dzd').innerText = (this.value ? (this.value * 265).toLocaleString() : '0') + ' د.ج'">
-    </div>
-    <div style="font-size:1.1rem;font-weight:bold;color:var(--gold);text-align:center;font-family:'Cairo',sans-serif;" id="calc-dzd">0 د.ج</div>
-    <div style="font-size:0.75rem;color:var(--t3);text-align:center;margin-top:5px;">سعر تقريبي (1$ = 265 دج)</div>
-</div>
-
-<script>
-// Image Fallback Global Script
-document.addEventListener('DOMContentLoaded', () => {
-    const images = document.querySelectorAll('img');
-    images.forEach(img => {
-        img.addEventListener('error', function() {
-            if (!this.getAttribute('data-failed')) {
-                this.setAttribute('data-failed', 'true');
-                this.src = 'https://placehold.co/600x400/111120/ff5500?text=Kouki+Shop';
+    <script src="https://www.paypal.com/sdk/js?client-id=AaHJFucxlQ3jgNa2irfUpqcYI7quQKmxJ6twO9yeMF4qX1jAaPyEG7ZZuzbjql9PrS9y-Gm1pSgCAO43&currency=USD"></script>
+
+    <!-- Tailwind CSS (CDN for Development) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              bg: "#0B0F1A",
+              surface: "rgba(17,24,39,0.6)",
+              primary: "#4F46E5",
+              accent: "#22D3EE",
+            },
+            boxShadow: {
+              glow: "0 0 30px rgba(79,70,229,0.25)",
+              glowCyan: "0 0 30px rgba(34,211,238,0.25)",
+            },
+            fontFamily: {
+              arabic: ['Cairo', 'sans-serif'],
             }
-        });
-    });
-});
-</script>
-</body>
+          }
+        }
+      }
+    </script>
+    <style type="text/tailwindcss">
+      @layer utilities {
+        .text-gradient {
+          @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+        }
+      }
+      body {
+        font-family: 'Cairo', sans-serif;
+        background-color: #0B0F1A;
+        color: white;
+      }
+      ::-webkit-scrollbar { width: 8px; }
+      ::-webkit-scrollbar-track { background: #0B0F1A; }
+      ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(34,211,238,0.5); }
+    </style>
 
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- React Router -->
+    <script crossorigin src="https://unpkg.com/@remix-run/router@1.16.1/dist/router.umd.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-router@6.23.1/dist/umd/react-router.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-router-dom@6.23.1/dist/umd/react-router-dom.production.min.js"></script>
+
+    <!-- Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Babel for in-browser JSX parsing -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { HashRouter, Routes, Route, Link, useLocation } = window.ReactRouterDOM;
+        
+        // --- SUPABASE CLIENT ---
+        const SUPABASE_URL = 'https://axbrosibywcdxwlbjyqv.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4YnJvc2lieXdjZHh3bGJqeXF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NzE1MDAsImV4cCI6MjA5MjQ0NzUwMH0.hXs9aFZ_GZzb1TGkk0lU1WpLL1fE_EohO1enS7H8Itc';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const { motion, AnimatePresence } = window.Motion;
+
+        // ==========================================
+        // SHARED COMPONENTS
+        // ==========================================
+        
+        function Button({ children, onClick, className = "", type = "button" }) {
+            return (
+                <motion.button
+                    type={type}
+                    onClick={onClick}
+                    whileTap={{ scale: 0.97 }}
+                    whileHover={{ scale: 1.03 }}
+                    className={`px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-accent shadow-glow font-bold text-white transition-all flex items-center justify-center gap-2 ${className}`}
+                >
+                    {children}
+                </motion.button>
+            );
+        }
+
+        function Card({ children, className = "" }) {
+            return (
+                <motion.div
+                    whileHover={{ y: -8, scale: 1.01 }}
+                    transition={{ duration: 0.3 }}
+                    className={`bg-surface backdrop-blur-xl border border-white/5 rounded-2xl p-6 shadow-lg hover:shadow-glowCyan transition-all overflow-hidden relative ${className}`}
+                >
+                    {children}
+                </motion.div>
+            );
+        }
+
+        function PageWrapper({ children, route }) {
+            return (
+                <motion.div
+                    key={route}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    {children}
+                </motion.div>
+            );
+        }
+
+        function ImageSlider({ images }) {
+            const [index, setIndex] = React.useState(0);
+
+            if (!images || images.length === 0) return null;
+
+            const handleNext = (e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % images.length); };
+            const handlePrev = (e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + images.length) % images.length); };
+
+            return (
+                <div className="relative w-full h-48 group overflow-hidden bg-gradient-to-br from-white/5 to-white/10 flex items-center justify-center p-6 backdrop-blur-sm border-b border-white/5">
+                    <img 
+                        src={images[index]} 
+                        className="w-full h-full object-contain transition-transform duration-500 ease-out group-hover:scale-110 drop-shadow-2xl" 
+                        alt="Product" 
+                    />
+                    
+                    {images.length > 1 && (
+                        <>
+                            <button onClick={handlePrev} className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"><i className="fa-solid fa-chevron-left text-xs"></i></button>
+                            <button onClick={handleNext} className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/80 text-white w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"><i className="fa-solid fa-chevron-right text-xs"></i></button>
+                            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10">
+                                {images.map((_, i) => (
+                                    <span key={i} onClick={(e) => { e.stopPropagation(); setIndex(i); }} className={`w-1.5 h-1.5 rounded-full cursor-pointer transition-all ${i === index ? "bg-accent scale-125" : "bg-white/40 hover:bg-white/60"}`} />
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        }
+
+        function Layout({ children }) {
+            return (
+                <div className="min-h-screen relative overflow-hidden flex flex-col">
+                    <div className="fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(79,70,229,0.15),transparent)] pointer-events-none" />
+                    <div className="fixed inset-0 bg-[radial-gradient(circle_at_80%_80%,rgba(34,211,238,0.12),transparent)] pointer-events-none" />
+                    
+                    <header className="relative z-20 container mx-auto px-4 py-6 flex justify-between items-center border-b border-white/5 backdrop-blur-md bg-bg/50 sticky top-0">
+                        <Link to="/" className="flex items-center gap-3 group">
+                            <img src="logo.png" alt="Kouki Shop Logo" className="w-12 h-12 object-contain group-hover:scale-110 transition-transform" />
+                            <span className="text-xl font-bold tracking-wide">Kouki <span className="text-gradient">Shop</span></span>
+                        </Link>
+                        <nav className="hidden md:flex gap-8 font-semibold">
+                            <Link to="/shopping" className="hover:text-accent transition-colors">تسوق عالمي</Link>
+                            <Link to="/digital" className="hover:text-accent transition-colors">خدمات رقمية</Link>
+                            <Link to="/gaming" className="hover:text-accent transition-colors">شحن ألعاب</Link>
+                        </nav>
+                    </header>
+
+                    <main className="relative z-10 container mx-auto px-4 py-10 flex-grow">
+                        {children}
+                    </main>
+
+                    <footer className="relative z-10 border-t border-white/5 bg-surface/50 mt-auto backdrop-blur-md">
+                        <div className="container mx-auto px-4 py-12">
+                            <div className="grid md:grid-cols-3 gap-8 text-center md:text-right text-white/70 mb-8 border-b border-white/5 pb-8">
+                                <div>
+                                    <h4 className="text-lg font-bold text-white mb-4">من نحن</h4>
+                                    <p className="mb-2">متجر كوكي بوابتكم الرقمية للتسوق من المتاجر العالمية.</p>
+                                    <p className="text-sm">ولاية خنشلة، بلدية قايس، حي الأنوار، شقة 104</p>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-white mb-4">روابط سريعة</h4>
+                                    <ul className="space-y-2">
+                                        <li><Link to="/shopping" className="hover:text-accent">التسوق العالمي</Link></li>
+                                        <li><Link to="/digital" className="hover:text-accent">الخدمات الرقمية</Link></li>
+                                        <li><Link to="/gaming" className="hover:text-accent">شحن ألعاب</Link></li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 className="text-lg font-bold text-white mb-4">تواصل معنا</h4>
+                                    <p className="mb-2">واتساب: 0562208794</p>
+                                    <p className="mb-2">إنستغرام: @abdelkarim_rem</p>
+                                    <p>تيليجرام: @BOOGEYMAN_DZ</p>
+                                </div>
+                            </div>
+                            <div className="text-center text-white/60 flex flex-col md:flex-row justify-between items-center">
+                                <p>Kouki Shop © 2026 - منصتك الأولى في الجزائر</p>
+                                <div className="flex gap-6 mt-4 md:mt-0">
+                                    <a href="#" className="hover:text-accent transition-colors"><i className="fa-brands fa-facebook fa-xl"></i></a>
+                                    <a href="#" className="hover:text-accent transition-colors"><i className="fa-brands fa-instagram fa-xl"></i></a>
+                                    <a href="#" className="hover:text-accent transition-colors"><i className="fa-brands fa-tiktok fa-xl"></i></a>
+                                    <a href="#" className="hover:text-accent transition-colors"><i className="fa-brands fa-telegram fa-xl"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // NEW SECTIONS
+        // ==========================================
+
+        function AdditionalServices() {
+            return (
+                <div className="my-20">
+                    <h2 className="text-3xl font-bold text-center mb-4">خدمات <span className="text-gradient">إضافية</span></h2>
+                    <p className="text-center text-white/70 mb-10">بالإضافة لخدمة الوساطة التجارية يقدم لكم متجر Kouki Shop:</p>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        <Card className="text-center group">
+                            <div className="w-16 h-16 mx-auto rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                                <i className="fa-solid fa-code"></i>
+                            </div>
+                            <h3 className="text-xl font-bold mb-2">إنشاء المواقع</h3>
+                            <p className="text-white/60">إنشاء المواقع وتصميم المتاجر الالكترونية الاحترافية.</p>
+                        </Card>
+                        <Card className="text-center group">
+                            <div className="w-16 h-16 mx-auto rounded-full bg-pink-500/20 text-pink-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                                <i className="fa-solid fa-bullhorn"></i>
+                            </div>
+                            <h3 className="text-xl font-bold mb-2">عمل إعلانات</h3>
+                            <p className="text-white/60">إعلانات فيسبوك وإنستغرام ممولة (Sponsoring) لزيادة مبيعاتك.</p>
+                        </Card>
+                        <Card className="text-center group">
+                            <div className="w-16 h-16 mx-auto rounded-full bg-green-500/20 text-green-400 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform">
+                                <i className="fa-solid fa-briefcase"></i>
+                            </div>
+                            <h3 className="text-xl font-bold mb-2">خدمات Freelance</h3>
+                            <p className="text-white/60">خدمات Freelance متنوعة واحترافية تلبي جميع احتياجاتك.</p>
+                        </Card>
+                    </div>
+                </div>
+            );
+        }
+
+        function CommissionTable() {
+            const tiers = [
+                { range: "تحت 3$", fee: "100 د.ج" },
+                { range: "3$ - 5$", fee: "150 د.ج" },
+                { range: "5$ - 11$", fee: "300 د.ج" },
+                { range: "11$ - 15$", fee: "400 د.ج" },
+                { range: "15$ - 18$", fee: "500 د.ج" },
+                { range: "18$ - 22$", fee: "600 د.ج" },
+                { range: "22$ - 25$", fee: "700 د.ج" },
+                { range: "25$ - 32$", fee: "800 د.ج" },
+                { range: "32$ - 38$", fee: "900 د.ج" },
+                { range: "38$ - 44$", fee: "1000 د.ج" },
+                { range: "44$ - 62$", fee: "1200 د.ج" },
+                { range: "62$ - 70$", fee: "1300 د.ج" },
+                { range: "70$ - 80$", fee: "1500 د.ج" },
+                { range: "80$ - 90$", fee: "1700 د.ج" },
+                { range: "90$ - 100$", fee: "1900 د.ج" },
+                { range: "100$ - 120$", fee: "2100 د.ج" },
+                { range: "120$ - 160$", fee: "2300 د.ج" },
+                { range: "160$ - 200$", fee: "2500 د.ج" },
+                { range: "فوق 200$", fee: "قابلة للتفاوض" }
+            ];
+
+            return (
+                <div className="my-20 max-w-4xl mx-auto">
+                    <h2 className="text-3xl font-bold text-center mb-4">جدول <span className="text-gradient">العمولات</span></h2>
+                    <p className="text-center text-white/70 mb-10">أسعار شفافة • هيكل تسعير بسيط وعادل</p>
+                    <Card className="p-0 overflow-hidden">
+                        <div className="grid grid-cols-2 bg-primary/20 p-4 font-bold text-lg text-center border-b border-white/10">
+                            <div>سعر المنتج ($)</div>
+                            <div>عمولة المتجر (د.ج)</div>
+                        </div>
+                        <div className="max-h-96 overflow-y-auto">
+                            {tiers.map((tier, idx) => (
+                                <div key={idx} className={`grid grid-cols-2 p-3 text-center ${idx % 2 === 0 ? 'bg-white/5' : ''} hover:bg-white/10 transition-colors`}>
+                                    <div className="font-semibold">{tier.range}</div>
+                                    <div className="text-accent">{tier.fee}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                </div>
+            );
+        }
+
+        function HowToBuy() {
+            return (
+                <div className="my-20">
+                    <h2 className="text-3xl font-bold text-center mb-4">خطوات <span className="text-gradient">الشراء</span></h2>
+                    <p className="text-center text-white/70 mb-10">ماعليك غير ترسلنا الرابط وخلي الباقي علينا 😊👌</p>
+                    <div className="grid md:grid-cols-4 gap-6 relative">
+                        <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-primary to-accent -z-10 -translate-y-1/2 opacity-30"></div>
+                        {[
+                            { num: "1", title: "اختر المنتج", desc: "ادخل لموقع Aliexpress او اي موقع يدعم الشحن للجزائر", icon: "fa-magnifying-glass" },
+                            { num: "2", title: "ارسل الرابط", desc: "ارسل لنا الرابط عبر بوت التيليجرام او فيسبوك", icon: "fa-mobile-screen" },
+                            { num: "3", title: "ادفع CCP", desc: "قم بالدفع والتأكيد عبر CCP او BARIDIMOB", icon: "fa-credit-card" },
+                            { num: "4", title: "استلم طلبك", desc: "يجيبهالك ساعي البريد للدار او تستلمها من البريد", icon: "fa-box-open" }
+                        ].map((step, idx) => (
+                            <div key={idx} className="relative text-center">
+                                <div className="w-16 h-16 mx-auto rounded-2xl bg-surface border border-primary/30 flex items-center justify-center text-2xl text-accent shadow-glowCyan mb-4 relative z-10">
+                                    <i className={`fa-solid ${step.icon}`}></i>
+                                </div>
+                                <h3 className="text-xl font-bold mb-2">{step.title}</h3>
+                                <p className="text-white/60 text-sm">{step.desc}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function RecentDeliveries() {
+            const deliveries = [
+                { title: "سماعات لينوفو بلوتوث", status: "تم التوصيل", client: "كريم (سطيف)", time: "وصلت في 18 يوم", icon: "fa-headphones", color: "text-green-400" },
+                { title: "ساعة ذكية LIGE 2024", status: "تم التوصيل", client: "يونس (وهران)", time: "وصلت في 22 يوم", icon: "fa-clock", color: "text-green-400" },
+                { title: "شاحن Baseus سريع", status: "في طريقها للزبون", client: "رفيدة (خنشلة)", time: "متوقع في غضون 5 أيام", icon: "fa-plug", color: "text-yellow-400" }
+            ];
+
+            return (
+                <div className="my-20">
+                    <h2 className="text-3xl font-bold text-center mb-4">طلبات عملائنا <span className="text-gradient">(وصلت بنجاح) 📦✨</span></h2>
+                    <p className="text-center text-white/70 mb-10">شاهد كيف تصل منتجات من AliExpress ومتاجر أخرى إلى منازل عملائنا في الجزائر بكل أمان!</p>
+                    <div className="grid md:grid-cols-3 gap-6">
+                        {deliveries.map((item, idx) => (
+                            <Card key={idx} className="flex flex-col gap-3">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-xl ${item.color}`}>
+                                        <i className={`fa-solid ${item.icon}`}></i>
+                                    </div>
+                                    <span className={`text-xs font-bold px-2 py-1 rounded-md bg-white/10 ${item.color}`}>{item.status}</span>
+                                </div>
+                                <h3 className="font-bold text-lg">{item.title}</h3>
+                                <p className="text-white/60 text-sm"><i className="fa-solid fa-user mr-1"></i> العميل: {item.client}</p>
+                                <p className="text-white/60 text-sm"><i className="fa-solid fa-truck mr-1"></i> {item.time}</p>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // ==========================================
+        // PAGES
+        // ==========================================
+
+        
+        function CustomerReviews() {
+            const [reviews, setReviews] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [form, setForm] = useState({ user_name: '', content: '' });
+            const [submitState, setSubmitState] = useState('idle'); // idle, loading, success
+
+            const fetchReviews = async () => {
+                const { data } = await supabase.from('comments').select('*').eq('status', 'Approved').order('created_at', { ascending: false }).limit(6);
+                if (data) setReviews(data);
+                setLoading(false);
+            };
+
+            useEffect(() => { fetchReviews(); }, []);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setSubmitState('loading');
+                const { error } = await supabase.from('comments').insert([form]);
+                if (error) {
+                    alert("حدث خطأ أثناء إرسال التقييم");
+                    setSubmitState('idle');
+                } else {
+                    setSubmitState('success');
+                    setForm({ user_name: '', content: '' });
+                    setTimeout(() => setSubmitState('idle'), 5000);
+                }
+            };
+
+            return (
+                <div className="my-20 max-w-6xl mx-auto">
+                    <h2 className="text-3xl font-bold text-center mb-4">آراء <span className="text-gradient">العملاء</span> 💬</h2>
+                    <p className="text-center text-white/70 mb-10">تجارب حقيقية من عملائنا الكرام بعد استخدام خدمات المتجر</p>
+                    
+                    <div className="grid md:grid-cols-3 gap-6 mb-12">
+                        {loading ? (
+                            Array(3).fill(0).map((_, i) => <Card key={i} className="h-32 bg-white/5 animate-pulse" />)
+                        ) : reviews.length === 0 ? (
+                            <div className="col-span-3 text-center text-white/50 py-8 border border-white/5 border-dashed rounded-xl">لا توجد تقييمات حتى الآن. كن أول من يقيّم خدماتنا!</div>
+                        ) : (
+                            reviews.map(r => (
+                                <Card key={r.id} className="relative">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-accent flex items-center justify-center font-bold text-white shadow-glowCyan">
+                                            {r.user_name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold">{r.user_name}</h4>
+                                            <div className="flex text-yellow-400 text-xs"><i className="fa-solid fa-star"></i><i className="fa-solid fa-star"></i><i className="fa-solid fa-star"></i><i className="fa-solid fa-star"></i><i className="fa-solid fa-star"></i></div>
+                                        </div>
+                                    </div>
+                                    <p className="text-white/80 text-sm leading-relaxed">{r.content}</p>
+                                </Card>
+                            ))
+                        )}
+                    </div>
+
+                    <Card className="max-w-2xl mx-auto p-8 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-accent to-primary"></div>
+                        <h3 className="text-xl font-bold mb-6 text-center">أضف تقييمك الخاص</h3>
+                        
+                        {submitState === 'success' ? (
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-6">
+                                <i className="fa-solid fa-circle-check text-5xl text-green-400 mb-4 shadow-glowCyan rounded-full"></i>
+                                <h4 className="font-bold text-lg text-green-400 mb-2">شكراً لتقييمك!</h4>
+                                <p className="text-white/60 text-sm">تم إرسال تقييمك بنجاح، سيظهر هنا بعد مراجعته من الإدارة.</p>
+                            </motion.div>
+                        ) : (
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm text-white/60 mb-1">الاسم الكامل</label>
+                                    <input required value={form.user_name} onChange={e=>setForm({...form, user_name: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 focus:border-accent outline-none" placeholder="الاسم" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-white/60 mb-1">التقييم (التجربة)</label>
+                                    <textarea required value={form.content} onChange={e=>setForm({...form, content: e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 focus:border-accent outline-none h-24 resize-none" placeholder="اكتب تجربتك هنا..."></textarea>
+                                </div>
+                                <Button type="submit" className="w-full" disabled={submitState === 'loading'}>
+                                    {submitState === 'loading' ? <i className="fa-solid fa-circle-notch fa-spin"></i> : "إرسال التقييم"}
+                                </Button>
+                            </form>
+                        )}
+                    </Card>
+                </div>
+            );
+        }
+
+        function Home() {
+            return (
+                <PageWrapper route="/">
+                    <div className="text-center py-20 max-w-4xl mx-auto">
+                        <motion.h1 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="text-5xl md:text-7xl font-extrabold mb-6 leading-tight"
+                        >
+                            KOUKI SHOP نافذتكم للتسوق <span className="text-gradient">العالمي</span>
+                        </motion.h1>
+                        <motion.p 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                            className="text-xl text-white/70 mb-10 leading-relaxed"
+                        >
+                            حنا نشرولك ونقومو بعملية دفع جميع مشترياتك سواء بالأورو أو الدولار.<br/> تسوق من أي مكان، وادفع بالدينار 🇩🇿
+                        </motion.p>
+                    </div>
+
+                    <div className="grid md:grid-cols-4 gap-4 text-sm text-white/70 bg-surface/30 backdrop-blur-md rounded-2xl p-6 border border-white/5 my-10 max-w-4xl mx-auto">
+                        <div className="flex items-center justify-center gap-2"><i className="fa-solid fa-shield-halved text-accent"></i> دفع آمن بالدينار</div>
+                        <div className="flex items-center justify-center gap-2"><i className="fa-solid fa-users text-accent"></i> +10,000 عميل في الجزائر</div>
+                        <div className="flex items-center justify-center gap-2"><i className="fa-solid fa-bolt text-accent"></i> تنفيذ سريع للطلبات</div>
+                        <div className="flex items-center justify-center gap-2"><i className="fa-solid fa-globe text-accent"></i> أشهر المتاجر العالمية</div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6 my-20">
+                        <Link to="/shopping" className="block">
+                            <Card className="h-full group text-center hover:bg-surface/80">
+                                <div className="w-16 h-16 mx-auto rounded-full bg-primary/20 text-primary flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+                                    <i className="fa-solid fa-earth-americas"></i>
+                                </div>
+                                <h3 className="text-2xl font-bold mb-3">التسوق العالمي</h3>
+                                <p className="text-white/60 mb-6">اشتري أي منتج من AliExpress وادفع بالدينار بكل سهولة.</p>
+                                <span className="text-accent font-semibold inline-flex items-center gap-2">ابدأ التسوق <i className="fa-solid fa-arrow-left"></i></span>
+                            </Card>
+                        </Link>
+                        <Link to="/digital" className="block">
+                            <Card className="h-full group text-center hover:bg-surface/80">
+                                <div className="w-16 h-16 mx-auto rounded-full bg-accent/20 text-accent flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+                                    <i className="fa-solid fa-bolt"></i>
+                                </div>
+                                <h3 className="text-2xl font-bold mb-3">الخدمات الرقمية</h3>
+                                <p className="text-white/60 mb-6">اشتراكات Netflix، Spotify، برامج التصميم والذكاء الاصطناعي.</p>
+                                <span className="text-accent font-semibold inline-flex items-center gap-2">تصفح الخدمات <i className="fa-solid fa-arrow-left"></i></span>
+                            </Card>
+                        </Link>
+                        <Link to="/gaming" className="block">
+                            <Card className="h-full group text-center hover:bg-surface/80 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 to-accent/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                <div className="w-16 h-16 mx-auto rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform relative z-10">
+                                    <i className="fa-solid fa-gamepad"></i>
+                                </div>
+                                <h3 className="text-2xl font-bold mb-3 relative z-10">شحن الألعاب</h3>
+                                <p className="text-white/60 mb-6 relative z-10">شحن فوري لألعاب Free Fire، PUBG، eFootball عبر الـ ID.</p>
+                                <span className="text-accent font-semibold inline-flex items-center gap-2 relative z-10">اشحن الآن <i className="fa-solid fa-arrow-left"></i></span>
+                            </Card>
+                        </Link>
+                    </div>
+
+                    <AdditionalServices />
+                    <CustomerReviews />
+                </PageWrapper>
+            );
+        }
+
+        function PayPalButton({ amount, orderDetails = {} }) {
+            const paypalRef = React.useRef();
+
+            React.useEffect(() => {
+                paypalRef.current.innerHTML = "";
+                if (window.paypal) {
+                    window.paypal.Buttons({
+                        createOrder: async (data, actions) => {
+                            try {
+                                const res = await fetch("https://netlify-6ukv.onrender.com/api/paypal/create-order", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ amount: parseFloat(amount) })
+                                });
+                                const orderData = await res.json();
+                                if (orderData.id) return orderData.id;
+                                throw new Error(orderData.error || "Failed to create order");
+                            } catch (err) {
+                                console.error(err);
+                                alert("حدث خطأ أثناء إعداد عملية الدفع");
+                            }
+                        },
+                        onApprove: async (data, actions) => {
+                            try {
+                                const res = await fetch("https://netlify-6ukv.onrender.com/api/paypal/capture-order", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                        order_id: data.orderID,
+                                        product_details: { ...orderDetails, amount_dzd: parseInt((parseFloat(amount) * 265).toFixed(0)) }
+                                    })
+                                });
+                                const captureData = await res.json();
+                                if (captureData.success) {
+                                    alert("تمت عملية الدفع بنجاح! تم حفظ طلبك بأمان.");
+                                } else {
+                                    alert("تم الدفع لكن حدث خطأ أثناء التحقق من الخادم.");
+                                }
+                            } catch (err) {
+                                console.error(err);
+                                alert("فشل في الاتصال بالخادم لتسجيل طلبك، يرجى مراسلة الدعم.");
+                            }
+                        }
+                    }).render(paypalRef.current);
+                }
+            }, [amount, orderDetails]);
+
+            return <div ref={paypalRef} className="mt-4 w-full"></div>;
+        }
+
+        function Shopping() {
+            const [url, setUrl] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [result, setResult] = useState(null);
+
+            const analyze = async () => {
+                if (!url) return alert("يرجى إدخال رابط المنتج");
+                setLoading(true);
+                setResult(null);
+                try {
+                    const response = await fetch("https://netlify-6ukv.onrender.com/analyze", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ url })
+                    });
+                    const data = await response.json();
+                    if (data.error) throw new Error(data.error);
+                    setResult(data);
+                } catch (err) {
+                    alert("حدث خطأ أثناء التحليل، قد يكون الرابط غير صالح أو المتجر لا يدعم هذه الميزة. " + err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <PageWrapper route="/shopping">
+                    <div className="max-w-4xl mx-auto py-10">
+                        <h1 className="text-4xl font-bold mb-4 text-center">التسوق <span className="text-gradient">العالمي</span></h1>
+                        <p className="text-center text-white/70 mb-10">ضع رابط المنتج الذي تريد شرائه من موقع AliExpress أو المواقع الأخرى المدعومة.</p>
+                        
+                        <Card className="p-8 max-w-2xl mx-auto">
+                            <div className="flex flex-col gap-4">
+                                <input 
+                                    value={url}
+                                    onChange={(e) => setUrl(e.target.value)}
+                                    placeholder="https://aliexpress.com/item/..." 
+                                    className="w-full p-4 rounded-xl bg-black/40 border border-white/10 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all text-left dir-ltr"
+                                    dir="ltr"
+                                />
+                                <Button onClick={analyze} className="w-full">
+                                    {loading ? <i className="fa-solid fa-circle-notch fa-spin"></i> : "حلّل المنتج"}
+                                </Button>
+                            </div>
+                            
+                            {result && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-8 p-6 bg-surface border border-white/10 rounded-xl relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-full h-1 bg-gradient-to-r from-primary to-accent"></div>
+                                    <h3 className="text-2xl font-bold mb-6 text-accent text-center"><i className="fa-solid fa-file-invoice-dollar mr-2"></i> فاتورة مفصلة</h3>
+                                    
+                                    {result.image && <img src={result.image} alt="Product" className="w-32 h-32 object-cover rounded-xl mb-6 mx-auto border border-white/10 shadow-lg" />}
+
+                                    <div className="space-y-3 bg-black/30 p-5 rounded-xl border border-white/5 mb-6">
+                                        <div className="flex justify-between border-b border-white/5 pb-3">
+                                            <span className="text-white/60">سعر المنتج:</span>
+                                            <span className="font-bold">{result.base_dzd} د.ج <span className="text-sm font-normal text-white/50 dir-ltr">(US ${result.price_usd})</span></span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-white/5 pb-3">
+                                            <span className="text-white/60">عمولة الموقع:</span>
+                                            <span className="font-bold text-accent">+ {result.commission} د.ج</span>
+                                        </div>
+                                        <div className="flex justify-between border-b border-white/5 pb-3">
+                                            <span className="text-white/60">مصاريف الشحن:</span>
+                                            <span className="font-bold">مجاني د.ج <span className="text-sm font-normal text-white/50">($0.00)</span></span>
+                                        </div>
+                                        <div className="flex justify-between pb-2 text-xl pt-2">
+                                            <span className="font-bold text-white">المجموع الكلي:</span>
+                                            <span className="font-bold text-primary">{result.price_dzd} د.ج</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-6 bg-white/5 p-4 rounded-xl border border-white/5">
+                                        <p className="text-sm text-accent mb-1"><i className="fa-brands fa-aliexpress mr-1"></i> AliExpress Official Store</p>
+                                        <p className="font-bold text-sm leading-relaxed">{result.title}</p>
+                                    </div>
+
+                                    <div className="bg-primary/10 border border-primary/20 p-5 rounded-xl mb-8">
+                                        <h4 className="font-bold mb-3 text-primary"><i className="fa-solid fa-truck-fast mr-2"></i> خيارات الشحن</h4>
+                                        <p className="text-sm text-white/80 mb-2">مشمول أو يحدد لاحقاً</p>
+                                        <p className="text-sm text-white/80 mb-2"><i className="fa-solid fa-check text-green-400 mr-2"></i> تتبع متاح شحن AliExpress القياسي</p>
+                                        <p className="text-sm font-bold mt-2 text-green-400">يصل في: غضون 15 - 30 يوم</p>
+                                    </div>
+
+                                    <div className="text-center mb-6">
+                                        <h4 className="font-bold text-xl mb-2 text-white">لتأكيد عملية الشراء</h4>
+                                        <p className="text-sm text-white/70">التقط صورة (Capture) للشاشة وارسلها مع الرابط عبر واتساب لتأكيد طلبك</p>
+                                    </div>
+
+                                    <a href={`https://wa.me/213562208794?text=${encodeURIComponent("مرحباً متجر Kouki Shop 👋 أريد تأكيد طلب هذا المنتج من فضلك:\n\n📦 المنتج: " + result.title + "\n💰 السعر: " + result.price_dzd + " دج\n🔗 الرابط: " + url)}`} target="_blank" className="block w-full mb-4">
+                                        <Button className="w-full bg-[#25D366] text-white shadow-none hover:shadow-[0_0_20px_rgba(37,211,102,0.4)] text-lg h-14">
+                                            <i className="fa-brands fa-whatsapp fa-xl ml-2"></i> للطلب عبر واتساب 
+                                        </Button>
+                                    </a>
+
+                                    <div className="text-center my-4 text-white/50 relative">
+                                        <span className="bg-surface px-2 relative z-10 text-sm">أو الدفع عبر PayPal</span>
+                                        <div className="absolute top-1/2 left-0 w-full h-px bg-white/10 -z-0"></div>
+                                    </div>
+                                    <PayPalButton amount={(result.price_dzd / 265).toFixed(2)} orderDetails={{ title: result.title, url, type: "AliExpress" }} />
+
+                                    <p className="text-center text-xs text-white/50 mt-6 px-4 leading-relaxed">ملاحظة: الدفع مسبق اثناء الشراء من الخارج، نشتري نيابة عنكم، ونضع عناوينكم الشخصية ثم نزودكم برقم التتبع.</p>
+                                </motion.div>
+                            )}
+                        </Card>
+
+                        <div className="text-center mt-8 text-white/60 flex flex-wrap justify-center gap-4 text-sm">
+                            <span><i className="fa-solid fa-check text-accent"></i> AliExpress</span>
+                            <span><i className="fa-solid fa-check text-accent"></i> Amazon</span>
+                            <span><i className="fa-solid fa-check text-accent"></i> TEMU</span>
+                            <span><i className="fa-solid fa-check text-accent"></i> Banggood</span>
+                            <span><i className="fa-solid fa-check text-accent"></i> eBay</span>
+                        </div>
+
+                        <HowToBuy />
+                        <CommissionTable />
+                        <RecentDeliveries />
+                        
+                        <div className="text-center mt-10">
+                            <p className="text-white/60 mb-4 text-sm">ملاحظة : كل المتاجر العالمية تفرض الدفع المسبق، متجر Kouki Shop وسيط خدماتي بينكم وبين البائعين الاجانب 🌎</p>
+                            <p className="text-white/60 text-sm">الضمانات: 99% من الطرود تصل بشكل سليم لاصحابها ونسبة 1% تكون غالبا في منتجات ثانوية. وحتى اذا لم تصل، تقوم Kouki Shop بمعالجة الامر قصد تعويضكم 😍</p>
+                        </div>
+                    </div>
+                </PageWrapper>
+            );
+        }
+
+        const ALL_SERVICES = [
+            { name: "ChatGPT Plus", category: "ai", iconUrl: "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg", desc: "GPT-4o • توليد صور • بلا حدود" },
+            { name: "Grok AI (X)", category: "ai", icon: "fa-brands fa-x-twitter", desc: "أقوى AI من منصة X • تحليل ذكي فائق" },
+            { name: "Gemini Advanced", category: "ai", iconUrl: "https://upload.wikimedia.org/wikipedia/commons/8/8a/Google_Gemini_logo.svg", desc: "Ultra 1.5 • ملفات • صور • Vision" },
+            { name: "Claude Pro", category: "ai", icon: "fa-solid fa-robot", desc: "Sonnet • ملفات طويلة • كود احترافي" },
+            { name: "Perplexity Pro", category: "ai", icon: "fa-solid fa-magnifying-glass-chart", desc: "بحث ذكي • مصادر حية • تقارير" },
+            { name: "Midjourney V6", category: "ai", icon: "fa-brands fa-discord text-indigo-400", desc: "توليد صور احترافي • عبر Discord" },
+            { name: "Netflix Premium", category: "entertainment", icon: "fa-brands fa-youtube text-red-500", desc: "4K UHD • شاشة خاصة • 190 دولة" },
+            { name: "Disney+", category: "entertainment", icon: "fa-solid fa-film text-blue-400", desc: "Marvel • Star Wars • Pixar • 4K" },
+            { name: "Prime Video", category: "entertainment", icon: "fa-brands fa-amazon text-yellow-400", desc: "أفلام حصرية • أمازون ستوديو" },
+            { name: "Spotify Premium", category: "music", icon: "fa-brands fa-spotify text-green-500", desc: "بلا إعلانات • تحميل • جودة عالية" },
+            { name: "Apple Music", category: "music", icon: "fa-brands fa-apple text-white", desc: "Lossless • Spatial Audio • 100M أغنية" },
+            { name: "Canva Pro", category: "design", iconUrl: "https://upload.wikimedia.org/wikipedia/commons/0/08/Canva_icon_2021.svg", desc: "قوالب Pro • Brand Kit • خلفيات AI" },
+            { name: "Adobe CC", category: "design", iconUrl: "https://upload.wikimedia.org/wikipedia/commons/4/4c/Adobe_Creative_Cloud_rainbow_icon.svg", desc: "Photoshop • Premiere • Illustrator" },
+            { name: "CapCut Pro", category: "design", icon: "fa-solid fa-scissors text-white", desc: "مونتاج AI • إزالة خلفية • ريلز" },
+            { name: "Envato Elements", category: "design", icon: "fa-solid fa-leaf text-green-400", desc: "ملايين الأصول • قوالب • فيديو • صور" },
+            { name: "Microsoft 365", category: "productivity", icon: "fa-brands fa-microsoft text-blue-400", desc: "5 أجهزة • 1TB OneDrive • Copilot AI" },
+            { name: "Notion Plus + AI", category: "productivity", icon: "fa-solid fa-n text-white", desc: "مساحة لامحدودة • AI مدمج • Team" },
+            { name: "Google One Drive", category: "cloud", icon: "fa-brands fa-google text-blue-400", desc: "100GB → 2TB • مشاركة عائلية" },
+            { name: "Udemy Courses", category: "education", icon: "fa-solid fa-graduation-cap text-purple-400", desc: "شراء أي كورس • وصول مدى الحياة" },
+            { name: "Meta Verified", category: "social", icon: "fa-solid fa-certificate text-blue-400", desc: "العلامة الزرقاء • Facebook & Instagram" },
+            { name: "Snapchat+", category: "social", icon: "fa-brands fa-snapchat text-yellow-400", desc: "ميزات حصرية • Badge • Story Rewatch" },
+            { name: "دعم السوشيال ميديا", category: "social", icon: "fa-solid fa-thumbs-up text-pink-400", desc: "متابعين • لايكات • مشاهدات" },
+            { name: "Xbox Game Pass", category: "gaming", icon: "fa-brands fa-xbox text-green-500", desc: "400+ لعبة • PC & Console • EA Play" },
+            { name: "PlayStation Plus", category: "gaming", icon: "fa-brands fa-playstation text-blue-500", desc: "Extra • Premium • ألعاب مجانية شهرية" },
+            { name: "Steam Games", category: "gaming", icon: "fa-brands fa-steam text-white", desc: "شراء أي لعبة • تحويل للحساب" }
+        ];
+
+                function Digital() {
+            const [services, setServices] = useState([]);
+            const [filter, setFilter] = useState("all");
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const fetchServices = async () => {
+                    const { data } = await supabase.from('services').select('*').eq('active', true).order('category');
+                    if (data) setServices(data);
+                    setLoading(false);
+                };
+                fetchServices();
+            }, []);
+
+            const filtered = filter === "all" ? services : services.filter(s => s.category === filter);
+
+            return (
+                <PageWrapper route="/digital">
+                    <div className="py-10">
+                        <h1 className="text-4xl font-bold mb-4 text-center">الكتالوج <span className="text-gradient">الرقمي</span></h1>
+                        <p className="text-center text-white/70 mb-10">اشتراكات أصلية مضمونة • بالدينار الجزائري • تفعيل فوري</p>
+                        
+                        <div className="flex flex-wrap justify-center gap-3 mb-10">
+                            {[
+                                { id: "all", label: "الكل" },
+                                { id: "AI", label: "ذكاء اصطناعي" },
+                                { id: "Entertainment", label: "ترفيه" },
+                                { id: "Music", label: "موسيقى" },
+                                { id: "Design", label: "تصميم وإبداع" },
+                                { id: "Gaming", label: "ألعاب" }
+                            ].map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setFilter(cat.id)}
+                                    className={`px-5 py-2 rounded-full transition-all font-semibold ${
+                                        filter === cat.id 
+                                        ? "bg-primary text-white shadow-glow" 
+                                        : "bg-white/5 text-white/60 hover:bg-white/10"
+                                    }`}
+                                >
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {loading ? (
+                            <div className="grid md:grid-cols-3 gap-6">{Array(6).fill(0).map((_, i) => <Card key={i} className="h-48 bg-white/5 animate-pulse" />)}</div>
+                        ) : filtered.length === 0 ? (
+                            <div className="text-center py-20 text-white/50">لا توجد خدمات متاحة في هذا القسم حالياً.</div>
+                        ) : (
+                            <div className="grid md:grid-cols-3 gap-6">
+                                {filtered.map((s) => (
+                                    <Card key={s.id} className="flex flex-col h-full overflow-hidden p-0">
+                                        {s.images && s.images.length > 0 ? (
+                                            <ImageSlider images={s.images} />
+                                        ) : (
+                                            <div className="p-5 flex items-center gap-4 border-b border-white/5">
+                                                <div className="w-12 h-12 rounded-xl bg-primary/20 text-primary flex items-center justify-center text-xl shadow-glow">
+                                                    <i className={`fa-solid ${s.category === 'AI' ? 'fa-robot' : s.category === 'Entertainment' ? 'fa-film' : s.category === 'Gaming' ? 'fa-gamepad' : 'fa-layer-group'}`}></i>
+                                                </div>
+                                                <h3 className="text-xl font-bold line-clamp-1">{s.name}</h3>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="p-5 flex flex-col flex-1">
+                                            {s.images && s.images.length > 0 && <h3 className="text-xl font-bold line-clamp-1 mb-2">{s.name}</h3>}
+                                            <div className="text-sm text-white/70 mb-6 flex-grow">اشتراك آمن ومضمون 100%</div>
+                                            <div className="mt-auto">
+                                                <div className="text-center font-bold text-accent mb-4 text-xl">{s.price_dzd} د.ج</div>
+                                                <a href={`https://wa.me/213562208794?text=${encodeURIComponent('مرحباً أريد طلب اشتراك: ' + s.name)}`} target="_blank">
+                                                    <Button className="w-full text-sm">اطلب الآن عبر واتساب</Button>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="mt-20 text-center bg-surface border border-white/5 p-8 rounded-2xl max-w-2xl mx-auto">
+                            <h3 className="text-2xl font-bold mb-4">هل تبحث عن اشتراك محدد؟ 🎬💻</h3>
+                            <p className="text-white/60 mb-6">نوفر تقريباً جميع الاشتراكات الرقمية! للاستفسار عن أي اشتراك اتصل بنا وسنقوم بتوفيره لك فوراً.</p>
+                            <div className="flex justify-center gap-4">
+                                <a href="https://t.me/BOOGEYMAN_DZ" target="_blank"><Button className="bg-gradient-to-r from-blue-500 to-cyan-400">تيليجرام</Button></a>
+                                <a href="https://wa.me/213562208794" target="_blank"><Button className="bg-gradient-to-r from-green-500 to-emerald-400">واتساب</Button></a>
+                            </div>
+                        </div>
+                    </div>
+                </PageWrapper>
+            );
+        }
+
+
+        function Topup({ gameName, gameIcon, options }) {
+            const [selected, setSelected] = useState(options[0].value);
+            return (
+                <Card className="p-0">
+                    <div className="p-6">
+                        <h3 className="text-xl font-bold text-center mb-6">{gameIcon} {gameName}</h3>
+                        <input
+                            placeholder="أدخل الـ ID"
+                            className="w-full p-4 rounded-xl bg-black/40 border border-white/10 text-center focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all mb-4 text-lg"
+                        />
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+                            {options.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => setSelected(opt.value)}
+                                    className={`p-3 rounded-xl transition-all ${
+                                        selected === opt.value
+                                        ? "bg-primary/30 border border-primary text-white"
+                                        : "bg-white/5 border border-white/5 text-white/70 hover:bg-white/10"
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                        <Button className="w-full text-lg py-4">اشحن {gameName}</Button>
+                    </div>
+                </Card>
+            );
+        }
+
+        function Gaming() {
+            return (
+                <PageWrapper route="/gaming">
+                    <div className="py-10">
+                        <h1 className="text-4xl font-bold mb-4 text-center">شحن <span className="text-gradient">الألعاب 🎮</span></h1>
+                        <p className="text-center text-white/70 mb-10">احصل على شحن فوري وآمن لحسابك</p>
+                        
+                        <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+                            <Topup 
+                                gameName="Free Fire"
+                                gameIcon="🔥"
+                                options={[
+                                    { value: "100", label: "100 💎" },
+                                    { value: "210", label: "210 💎" },
+                                    { value: "530", label: "530 💎" },
+                                    { value: "1080", label: "1080 💎" },
+                                    { value: "weekly", label: "عضوية أسبوعية" },
+                                    { value: "monthly", label: "عضوية شهرية" }
+                                ]}
+                            />
+                            <Topup 
+                                gameName="PUBG Mobile"
+                                gameIcon="🔫"
+                                options={[
+                                    { value: "60", label: "60 UC" },
+                                    { value: "325", label: "325 UC" },
+                                    { value: "660", label: "660 UC" },
+                                    { value: "1800", label: "1800 UC" },
+                                    { value: "prime", label: "Prime Plus" }
+                                ]}
+                            />
+                            <Topup 
+                                gameName="eFootball 2026"
+                                gameIcon="⚽"
+                                options={[
+                                    { value: "130", label: "130 Coins" },
+                                    { value: "300", label: "300 Coins" },
+                                    { value: "1050", label: "1050 Coins" },
+                                    { value: "2150", label: "2150 Coins" },
+                                    { value: "3300", label: "3300 Coins" }
+                                ]}
+                            />
+                        </div>
+                        <div className="mt-10 text-center text-white/60 max-w-2xl mx-auto">
+                            <p className="mb-2"><strong className="text-accent">الدفع:</strong> بالدينار الجزائري | <strong className="text-accent">التفعيل:</strong> فوري بعد الدفع</p>
+                            <p className="text-sm">ملاحظة: تأكد من إدخال ID صحيح، نحن غير مسؤولين عن الأخطاء.</p>
+                        </div>
+                    </div>
+                </PageWrapper>
+            );
+        }
+
+        function AnimatedRoutes() {
+            const location = useLocation();
+            return (
+                <AnimatePresence mode="wait">
+                    <Routes location={location} key={location.pathname}>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/shopping" element={<Shopping />} />
+                        <Route path="/digital" element={<Digital />} />
+                        <Route path="/gaming" element={<Gaming />} />
+                    </Routes>
+                </AnimatePresence>
+            );
+        }
+
+        function App() {
+            return (
+                <HashRouter>
+                    <Layout>
+                        <AnimatedRoutes />
+                    </Layout>
+                </HashRouter>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
 </html>

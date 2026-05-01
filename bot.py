@@ -21,57 +21,17 @@ import threading
 from telegram.constants import ParseMode
 
 from aliexpress_api import AliexpressApi, models
-import httpx
-from bs4 import BeautifulSoup
-
-class DummyDetails:
-    def __init__(self, title, price, image):
-        self.product_title = title
-        self.target_sale_price = str(price)
-        self.original_price = str(price + min(price*0.2, 10))
-        self.product_main_image_url = image
-        self.evaluate_rate = '4.5'
-        self.target_sale_price_currency = '100+'
-        self.shop_name = 'AliExpress Store'
-        self.promotion_link = ''
-
-async def fallback_scrape(url: str):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9"
-    }
-    async with httpx.AsyncClient(follow_redirects=True, timeout=15.0) as client:
-        try:
-            resp = await client.get(url, headers=headers)
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            
-            title = soup.find("meta", property="og:title")
-            title = title["content"] if title else "AliExpress Product"
-            
-            image = soup.find("meta", property="og:image")
-            image = image["content"] if image else ""
-
-            price_match = re.search(r'"actPrice800":"([\d\.]+)"', resp.text)
-            if not price_match:
-                price_match = re.search(r'"target_sale_price":"([\d\.]+)"', resp.text)
-            
-            if price_match:
-                usd_price = float(price_match.group(1))
-                return DummyDetails(title, usd_price, image)
-            return None
-        except Exception as e:
-            return None
 
 # ==========================================
 # ⚙️ الإعدادات الأساسية
 # ==========================================
-TOKEN = "7250440174:AAFya0q1xrsvJ5E4DAdamjZQASmmIWTEmNA"
+TOKEN = "7250440174:AAE886dWCGSh6JqCdtd66SpNDQPZPoz4w4g"
 APP_KEY = "515874"
 APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
 TRACKING_ID = '130740'
 
-USD_TO_DZD = 265
-PROFIT_MARGIN = 1.7 # هامش الربح للتاجر
+USD_TO_DZD = 250
+PROFIT_MARGIN = 1.4 # هامش الربح للتاجر
 
 aliexpress = AliexpressApi(APP_KEY, APP_SECRET, models.Language.EN, models.Currency.USD, TRACKING_ID)
 LINK_REGEX = re.compile(r'https?://([a-zA-Z0-9.-]+\.)?aliexpress\.[a-z]{2,3}(/[^\s]*)?', re.IGNORECASE)
@@ -275,9 +235,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         details = results[0][0] if not isinstance(results[0], Exception) and results[0] else None
         if not details:
-            details = await fallback_scrape(item_url)
-            
-        if not details:
             await sent_msg.edit_text("❌ لم أجد بيانات المنتج.")
             return
 
@@ -458,19 +415,15 @@ async def product_api(url: str):
     except Exception as e:
         return {"error": str(e)}
 
-import os
-
 def run_api():
-    from main import app as main_app
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(main_app, host="0.0.0.0", port=port)
+    uvicorn.run(api_app, host="0.0.0.0", port=8000)
 
 if __name__ == '__main__':
-    # تشغيل تطبيق main.py في Thread ليعمل السيرفر والبوت معاً
+    # تشغيل API في Thread
     threading.Thread(target=run_api, daemon=True).start()
     
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Kouki Shop Bot and main.py API Server are now running!")
+    print("Kouki Shop Bot and API Server are now running on port 8000.")
     app.run_polling()
