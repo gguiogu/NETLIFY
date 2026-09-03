@@ -23,17 +23,11 @@ from telegram.constants import ParseMode
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 import uvicorn
 
 from aliexpress_api import AliexpressApi, models
 
-
-# ============================================================
-# ⚙️ CONFIGURATION
-# ============================================================
-
-from aliexpress_api import AliexpressApi, models
 
 # ==========================================
 # ⚙️ الإعدادات الأساسية
@@ -43,6 +37,7 @@ APP_KEY = "515874"
 APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
 TRACKING_ID = '130740'
 
+USD_TO_DZD = 260
 # Optional:
 # USD_TO_DZD=260
 # CHECKOUT_BUFFER=1.14
@@ -60,6 +55,14 @@ USD_TO_DZD = float(os.getenv("USD_TO_DZD", "260"))
 # Example:
 # $11.93 API price × 1.12 = $13.36 estimated checkout price
 CHECKOUT_BUFFER = float(os.getenv("CHECKOUT_BUFFER", "1.14"))
+
+# AliExpress destination used for country-specific price/shipping lookup.
+SHIP_TO_COUNTRY = os.getenv("SHIP_TO_COUNTRY", "DZ").upper()
+
+# The affiliate shipping endpoint expects a tax-rate parameter. We do not
+# add a separate tax amount to the customer's price here; shipping is the
+# only extra cost added after the 14% product buffer.
+SHIPPING_TAX_RATE = os.getenv("SHIPPING_TAX_RATE", "0")
 
 # Safety limit for the buffer.
 MAX_CHECKOUT_BUFFER = float(
@@ -452,6 +455,83 @@ def parse_sales(value) -> int:
         return 0
 
 
+def get_numeric_attr(obj, names):
+    """Return the first usable numeric attribute/key from an object."""
+    if obj is None:
+        return None
+
+    for name in names:
+        try:
+            if isinstance(obj, dict):
+                value = obj.get(name)
+            else:
+                value = getattr(obj, name, None)
+        except Exception:
+            value = None
+
+        parsed = parse_number(value, -1.0)
+        if parsed >= 0:
+            return parsed
+
+    return None
+
+
+def extract_shipping_fee(shipping_result) -> Optional[float]:
+    """Extract shipping_fee from the official affiliate shipping response."""
+    if shipping_result is None:
+        return None
+
+    # The dedicated endpoint returns a ShippingInfo object with shipping_fee.
+    direct = get_numeric_attr(
+        shipping_result,
+        ("shipping_fee", "shippingFee", "fee", "shipping_cost"),
+    )
+    if direct is not None:
+        return round(max(0.0, direct), 2)
+
+    # Be defensive in case the SDK wraps the response in nested objects/dicts.
+    seen = set()
+    queue = [shipping_result]
+    while queue:
+        obj = queue.pop(0)
+        oid = id(obj)
+        if oid in seen:
+            continue
+        seen.add(oid)
+
+        direct = get_numeric_attr(
+            obj,
+            ("shipping_fee", "shippingFee", "fee", "shipping_cost"),
+        )
+        if direct is not None:
+            return round(max(0.0, direct), 2)
+
+        if isinstance(obj, dict):
+            values = obj.values()
+        elif isinstance(obj, (list, tuple, set)):
+            values = obj
+        else:
+            try:
+                values = vars(obj).values()
+            except Exception:
+                values = ()
+
+        for value in values:
+            if isinstance(value, (dict, list, tuple, set)) or hasattr(value, "__dict__"):
+                queue.append(value)
+
+    return None
+
+
+def get_sku_id(details):
+    """Get the SKU id required by the country-specific shipping API."""
+    for field in ("sku_id", "skuId", "product_sku_id", "productSkuId"):
+        value = getattr(details, field, None)
+        if value not in (None, "", 0, "0"):
+            return value
+    return None
+
+
 def analyze_smart_data(
     rating: str,
     price_usd: float,
@@ -459,6 +539,7 @@ def analyze_smart_data(
     sales: str,
     estimated_checkout_usd: Optional[float] = None,
     shipping_usd: float = 0.0,
+    shipping_confirmed: bool = False,
 ) -> dict:
     """
     Complete product analysis.
@@ -634,11 +715,15 @@ def analyze_smart_data(
 
     if shipping_usd > 0:
         shipping = (
-            f"🚚 <b>الشحن:</b> + ${shipping_usd:.2f}"
+            f"🚚 <b>الشحن إلى الجزائر:</b> + ${shipping_usd:.2f}"
+        )
+    elif shipping_confirmed:
+        shipping = (
+            "🚚 <b>الشحن إلى الجزائر:</b> مجاني مؤكّد"
         )
     else:
         shipping = (
-            "🚚 <b>الشحن:</b> غير محسوب — يتحقق عند الدفع"
+            "🚚 <b>الشحن إلى الجزائر:</b> غير متوفر في API — يتحقق عند الدفع"
         )
 
     # --------------------------------------------------------
@@ -774,6 +859,17 @@ def analyze_smart_data(
 
         "profit_dzd":
             profit,
+
+        # Shipping / price breakdown
+        "shipping_usd":
+            shipping_usd,
+        "final_checkout_usd":
+            final_checkout_usd,
+        "buffer_usd":
+            round(
+                max(0.0, estimated_checkout_usd - price_usd),
+                2,
+            ),
 
         # Orders
         "orders":
@@ -968,7 +1064,8 @@ async def fetch_product_data(
         loop.run_in_executor(
             None,
             lambda: aliexpress.get_products_details(
-                [pid]
+                [pid],
+                country=SHIP_TO_COUNTRY,
             ),
         ),
     ]
@@ -1188,9 +1285,12 @@ async def fetch_product_data(
         discount_val = 0
 
     # --------------------------------------------------------
-    # Checkout buffer
+    # Checkout buffer + country-specific shipping
     # --------------------------------------------------------
 
+    # IMPORTANT: the 14% buffer is applied ONLY to the product price.
+    # Shipping is then added separately using the AliExpress affiliate
+    # shipping-info endpoint for Algeria (DZ) and the product SKU.
     estimated_checkout_usd = round(
         p_float * max(
             1.0,
@@ -1199,17 +1299,58 @@ async def fetch_product_data(
         2,
     )
 
-    # Read a numeric shipping fee when the API exposes one.
     shipping_usd = 0.0
-    for field in (
-        "shipping_fee", "shipping_cost", "shipping_price",
-        "freight", "delivery_fee", "shipping_fee_usd"
-    ):
-        value = getattr(details, field, None)
-        parsed = parse_number(value, -1.0)
-        if parsed >= 0:
-            shipping_usd = parsed
-            break
+    shipping_confirmed = False
+    shipping_source = "unavailable"
+    sku_id = get_sku_id(details)
+
+    # The current maintained package may not contain the shipping endpoint,
+    # so use getattr rather than crashing older deployments. The Render
+    # requirements below install the branch that adds this method.
+    shipping_method = getattr(
+        aliexpress,
+        "get_affiliate_product_shipping_info",
+        None,
+    )
+
+    if callable(shipping_method) and sku_id not in (None, "", 0, "0"):
+        try:
+            shipping_result = await asyncio.get_running_loop().run_in_executor(
+                None,
+                lambda: shipping_method(
+                    product_id=int(pid),
+                    sku_id=int(sku_id),
+                    ship_to_country=SHIP_TO_COUNTRY,
+                    target_currency="USD",
+                    target_sale_price=str(p_float),
+                    tax_rate=SHIPPING_TAX_RATE,
+                ),
+            )
+            fee = extract_shipping_fee(shipping_result)
+            if fee is not None:
+                shipping_usd = fee
+                shipping_confirmed = True
+                shipping_source = "affiliate_shipping_api"
+        except Exception as e:
+            logger.warning(
+                "Country-specific shipping lookup failed for %s: %s",
+                pid,
+                e,
+            )
+
+    # Last-resort fallback only if the product detail itself exposes a
+    # numeric fee. This is NOT treated as Algeria-confirmed shipping.
+    if not shipping_confirmed:
+        for field in (
+            "shipping_fee", "shipping_cost", "shipping_price",
+            "freight", "delivery_fee", "shipping_fee_usd"
+        ):
+            value = getattr(details, field, None)
+            parsed = parse_number(value, -1.0)
+            if parsed >= 0:
+                shipping_usd = parsed
+                shipping_source = "product_detail_fallback"
+                break
 
     smart_data = analyze_smart_data(
         rating=rate,
@@ -1218,6 +1359,7 @@ async def fetch_product_data(
         sales=sales,
         estimated_checkout_usd=estimated_checkout_usd,
         shipping_usd=shipping_usd,
+        shipping_confirmed=shipping_confirmed,
     )
 
     # --------------------------------------------------------
@@ -1356,6 +1498,31 @@ async def fetch_product_data(
                 "estimated_checkout_usd"
             ],
 
+        "product_buffer_usd":
+            smart_data[
+                "buffer_usd"
+            ],
+
+        "final_checkout_usd":
+            smart_data[
+                "final_checkout_usd"
+            ],
+
+        "shipping_usd":
+            shipping_usd,
+
+        "shipping_confirmed":
+            shipping_confirmed,
+
+        "shipping_source":
+            shipping_source,
+
+        "shipping_source_detail":
+            shipping_source,
+
+        "ship_to_country":
+            SHIP_TO_COUNTRY,
+
         "checkout_dzd":
             smart_data[
                 "checkout_dzd"
@@ -1492,8 +1659,11 @@ async def send_pro_response(
 {data['price_usd']}$ <s>{data['orig_usd']}$</s>
 (-{data['disc']}%)
 
-💳 <b>السعر المتوقع عند الدفع:</b>
-≈ {data['estimated_checkout_usd']}$
+💳 <b>حساب السعر:</b>
+• سعر المنتج: <b>${data['price_usd']:.2f}</b>
+• Buffer 14%: <b>+${data.get('product_buffer_usd', 0):.2f}</b>
+• الشحن إلى الجزائر: <b>+${data.get('shipping_usd', 0):.2f}</b>
+• الإجمالي قبل العمولة: <b>${data.get('final_checkout_usd', data['estimated_checkout_usd']):.2f}</b>
 
 ⭐ <b>التقييم:</b>
 {data['rate']}/5.0
@@ -1541,7 +1711,7 @@ async def send_pro_response(
 
     pro_img = await create_pro_image(
         data["img"],
-        str(data["estimated_checkout_usd"]),
+        str(data.get("final_checkout_usd", data["estimated_checkout_usd"])),
         str(data["buy_dzd"]).replace(
             ",",
             "",
@@ -1742,16 +1912,6 @@ class LinkRequest(BaseModel):
     url: str
 
 
-@api_app.get("/health")
-async def health_api():
-    return {
-        "status": "ok",
-        "service": "kouki-shop-bot-test",
-        "usd_to_dzd": USD_TO_DZD,
-        "checkout_buffer": CHECKOUT_BUFFER,
-    }
-
-
 # ============================================================
 # /product
 # ============================================================
@@ -1854,7 +2014,7 @@ class PayPalOrderRequest(BaseModel):
 
 class PayPalCaptureRequest(BaseModel):
     order_id: str
-    product_details: dict = Field(default_factory=dict)
+    product_details: dict = {}
 
 
 PAYPAL_CLIENT_ID = os.getenv(
@@ -2211,6 +2371,11 @@ async def main():
     logger.info(
         "USD_TO_DZD = %s",
         USD_TO_DZD,
+    )
+
+    logger.info(
+        "SHIP_TO_COUNTRY = %s",
+        SHIP_TO_COUNTRY,
     )
 
     logger.info(
