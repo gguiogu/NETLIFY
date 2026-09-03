@@ -1,2384 +1,546 @@
-import asyncio
-import aiohttp
+"""
+Kouki Shop - AliExpress Price Bot
+==================================
+Telegram bot that takes an AliExpress product link, fetches product data
+(price, images, rating, shipping to Algeria) and returns the final
+customer price in DZD after buffer + shipping + Kouki Shop commission.
+
+Run with:
+    python bot.py
+
+No environment variables are required. All credentials are hardcoded
+below - replace the placeholders with your real values.
+"""
+
 import re
 import time
-import io
-import base64
-import os
+import json
 import logging
-from typing import Optional, Tuple
-from urllib.parse import urlparse, parse_qs, unquote
+import hashlib
+import threading
+from datetime import datetime
+from urllib.parse import urlparse, parse_qs
 
-from PIL import Image, ImageDraw, ImageFont
-
+import requests
+from cachetools import TTLCache
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.constants import ParseMode
 from telegram.ext import (
+    Application,
     ApplicationBuilder,
     CommandHandler,
-    ContextTypes,
     MessageHandler,
+    ContextTypes,
     filters,
 )
-from telegram.constants import ParseMode
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-import uvicorn
+try:
+    from aliexpress_api import AliexpressApi, models as ali_models
+    HAS_ALIEXPRESS_LIB = True
+except Exception:  # library not installed / import failure -> fall back to raw API calls only
+    HAS_ALIEXPRESS_LIB = False
 
-from aliexpress_api import AliexpressApi, models
+# ---------------------------------------------------------------------------
+# CREDENTIALS - HARDCODED ON PURPOSE (no Render environment variables)
+# Replace these placeholders with your real values before deploying.
+# ---------------------------------------------------------------------------
 
+BOT_TOKEN = "8735963784:AAHpOSCihKDLNSm08qtQw8_4hAJ5yy689f8"
 
-# ============================================================
-# ⚙️ CONFIGURATION — NO ENVIRONMENT VARIABLES
-# ============================================================
-# Put your credentials directly below.
-# Do NOT share this file publicly after adding your secrets.
+ALIEXPRESS_APP_KEY = "515874"
+ALIEXPRESS_APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
+ALIEXPRESS_TRACKING_ID = "130740"
 
+# PayPal - optional, only used if you wire up paid orders. Leave the
+# placeholders if you don't use PayPal yet.
+PAYPAL_CLIENT_ID = "YOUR_PAYPAL_CLIENT_ID"
+PAYPAL_CLIENT_SECRET = "YOUR_PAYPAL_CLIENT_SECRET"
+PAYPAL_MODE = "live"  # "sandbox" or "live"
 
-TOKEN = "8735963784:AAHpOSCihKDLNSm08qtQw8_4hAJ5yy689f8"
-APP_KEY = "515874"
-APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
-TRACKING_ID = '130740'
+# ---------------------------------------------------------------------------
+# PRICING CONFIG
+# ---------------------------------------------------------------------------
 
-# Fixed Kouki Shop pricing settings
-USD_TO_DZD = 260.0
-CHECKOUT_BUFFER = 1.14
-MAX_CHECKOUT_BUFFER = 1.20
-CACHE_TTL = 900
-PORT = 8000
-RESELLER_MARKUP = 1.30
+USD_TO_DZD_RATE = 260.0          # 1 USD = 260 DZD
+PRODUCT_BUFFER_RATE = 0.14       # 14% buffer, applied to PRODUCT PRICE ONLY
 
-# Destination country for shipping lookup
-SHIP_TO_COUNTRY = "DZ"
+# Kouki Shop commission - flat DZD amount, tweak or turn into a
+# percentage-based rule if you prefer.
+COMMISSION_FLAT_DZD = 300.0
+COMMISSION_PERCENT = 0.0         # extra % commission on subtotal_dzd if wanted
 
-# Shipping tax parameter used by the shipping lookup.
-SHIPPING_TAX_RATE = "0"
+SHIPPING_DESTINATION_COUNTRY = "DZ"  # Algeria
 
-FACEBOOK_URL = "https://www.facebook.com/XBHTHAGOAT/"
+CACHE_TTL_SECONDS = 15 * 60      # 15 minutes
 
-# ============================================================
-# 📝 LOGGING
-# ============================================================
+# ---------------------------------------------------------------------------
+# LOGGING
+# ---------------------------------------------------------------------------
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(message)s",
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
+logger = logging.getLogger("kouki_shop_bot")
 
-logger = logging.getLogger("kouki-shop-bot")
+# ---------------------------------------------------------------------------
+# CACHE (short TTL - prices/shipping change often)
+# ---------------------------------------------------------------------------
 
+product_cache = TTLCache(maxsize=500, ttl=CACHE_TTL_SECONDS)
+shipping_cache = TTLCache(maxsize=500, ttl=CACHE_TTL_SECONDS)
 
-# ============================================================
-# 🔐 STARTUP VALIDATION
-# ============================================================
+# ---------------------------------------------------------------------------
+# ALIEXPRESS LINK DETECTION
+# ---------------------------------------------------------------------------
 
-if not TOKEN or TOKEN.startswith("PASTE_YOUR_"):
-    logger.warning("BOT_TOKEN is not configured in bot.py.")
-
-if (
-    not APP_KEY or APP_KEY.startswith("PASTE_YOUR_")
-    or not APP_SECRET or APP_SECRET.startswith("PASTE_YOUR_")
-    or not TRACKING_ID or TRACKING_ID.startswith("PASTE_YOUR_")
-):
-    logger.warning("AliExpress credentials are not fully configured in bot.py.")
-
-
-# ============================================================
-# 🛒 ALIEXPRESS CLIENT
-# ============================================================
-
-aliexpress = AliexpressApi(
-    APP_KEY,
-    APP_SECRET,
-    models.Language.EN,
-    models.Currency.USD,
-    TRACKING_ID,
-)
-
-
-# ============================================================
-# 🔗 LINK HANDLING
-# ============================================================
-
-LINK_REGEX = re.compile(
-    r"https?://(?:[a-zA-Z0-9.-]+\.)?"
-    r"aliexpress\.[a-z]{2,3}"
-    r"(?:/[^\s]*)?",
+ALIEXPRESS_URL_REGEX = re.compile(
+    r"(https?://(?:[\w.-]*\.)?aliexpress\.(?:com|us|ru)[^\s]*)",
     re.IGNORECASE,
 )
-
-product_cache = {}
-
-
-def extract_id(url: str) -> Optional[str]:
-    """
-    Extract AliExpress product ID from common URL formats.
-    """
-
-    patterns = [
-        r"/item/(\d+)\.html",
-        r"productIds=(\d+)",
-        r"/(\d+)\.html",
-    ]
-
-    for pattern in patterns:
-        match = re.search(
-            pattern,
-            url,
-            re.IGNORECASE,
-        )
-
-        if match:
-            return match.group(1)
-
-    return None
+PRODUCT_ID_REGEX = re.compile(r"/item/(?:.*?)?(\d+)\.html")
 
 
-def get_safe_link(api_result, fallback_url: str) -> str:
-    """
-    Safely get the affiliate promotion link.
-    """
+def extract_aliexpress_links(text: str):
+    return ALIEXPRESS_URL_REGEX.findall(text or "")
+
+
+def resolve_short_link(url: str) -> str:
+    """AliExpress share links (s.click.aliexpress.com / a.aliexpress.com) are
+    shortened redirects. Follow them to get the real product URL."""
+    try:
+        resp = requests.head(url, allow_redirects=True, timeout=10)
+        if resp.url:
+            return resp.url
+    except requests.RequestException:
+        try:
+            resp = requests.get(url, allow_redirects=True, timeout=10)
+            if resp.url:
+                return resp.url
+        except requests.RequestException as e:
+            logger.warning("Could not resolve short link %s: %s", url, e)
+    return url
+
+
+def extract_product_id(url: str):
+    resolved = url
+    if "item" not in url:
+        resolved = resolve_short_link(url)
+
+    match = PRODUCT_ID_REGEX.search(resolved)
+    if match:
+        return match.group(1), resolved
+
+    # fallback: some links carry the id as a query param
+    parsed = urlparse(resolved)
+    qs = parse_qs(parsed.query)
+    for key in ("productId", "product_id", "id"):
+        if key in qs and qs[key][0].isdigit():
+            return qs[key][0], resolved
+
+    # last resort: any long digit sequence in the path
+    digits = re.findall(r"(\d{6,})", resolved)
+    if digits:
+        return digits[0], resolved
+
+    return None, resolved
+
+
+# ---------------------------------------------------------------------------
+# RAW ALIEXPRESS OPEN PLATFORM SIGNED REQUEST
+# (used for endpoints the python-aliexpress-api wrapper doesn't expose,
+# e.g. shipping/freight lookups)
+# ---------------------------------------------------------------------------
+
+ALIEXPRESS_GATEWAY = "https://api-sg.aliexpress.com/sync"
+
+
+def _sign_params(params: dict, secret: str) -> str:
+    sorted_keys = sorted(params.keys())
+    base_string = secret + "".join(f"{k}{params[k]}" for k in sorted_keys) + secret
+    return hashlib.md5(base_string.encode("utf-8")).hexdigest().upper()
+
+
+def aliexpress_api_call(method: str, extra_params: dict, timeout: int = 12):
+    """Generic signed call to the AliExpress Open Platform gateway."""
+    params = {
+        "app_key": ALIEXPRESS_APP_KEY,
+        "method": method,
+        "sign_method": "md5",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "v": "2.0",
+        "format": "json",
+    }
+    params.update(extra_params)
+    params["sign"] = _sign_params(params, ALIEXPRESS_APP_SECRET)
 
     try:
-        if (
-            not isinstance(api_result, Exception)
-            and api_result
-            and hasattr(api_result[0], "promotion_link")
-            and api_result[0].promotion_link
-        ):
-            return api_result[0].promotion_link
-    except Exception:
-        pass
-
-    return fallback_url
+        resp = requests.get(ALIEXPRESS_GATEWAY, params=params, timeout=timeout)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as e:
+        logger.warning("AliExpress API call failed (%s): %s", method, e)
+        return None
+    except json.JSONDecodeError:
+        logger.warning("AliExpress API returned non-JSON response for %s", method)
+        return None
 
 
-async def extract_product_info(
-    text: str,
-) -> Tuple[Optional[str], Optional[str]]:
+def fetch_shipping_to_algeria(product_id: str, sku_id: str = None):
     """
-    Extract product ID and canonical AliExpress URL.
+    Attempt to get a real numeric shipping cost (USD) to Algeria for this
+    product/SKU. Returns a tuple:
+        (shipping_usd: float | None, status: "known" | "free" | "unknown")
+
+    We never invent a shipping value. If the API doesn't give us a reliable
+    number, status is "unknown" and the caller must display the
+    "not calculated - verified at checkout" message.
     """
+    cache_key = f"{product_id}:{sku_id or 'default'}"
+    if cache_key in shipping_cache:
+        return shipping_cache[cache_key]
 
-    match = LINK_REGEX.search(text)
+    result = (None, "unknown")
 
-    if not match:
-        return None, None
+    # Freight/logistics calculation endpoint. Exact param names can differ
+    # slightly by account/permission tier - adjust `logistics_params` to
+    # match what your AliExpress Open Platform app is authorized for.
+    logistics_params = {
+        "product_id": product_id,
+        "country_code": SHIPPING_DESTINATION_COUNTRY,
+        "ship_to_country": SHIPPING_DESTINATION_COUNTRY,
+        "target_currency": "USD",
+        "quantity": 1,
+    }
+    if sku_id:
+        logistics_params["sku_id"] = sku_id
 
-    url = match.group(0)
+    data = aliexpress_api_call(
+        "aliexpress.logistics.buyer.freight.calculate", logistics_params
+    )
 
-    pid = extract_id(url)
-
-    if pid:
-        return (
-            pid,
-            f"https://www.aliexpress.com/item/{pid}.html",
-        )
-
-    # Short / redirect links
-    if any(
-        domain in url
-        for domain in [
-            "s.click.aliexpress.com",
-            "a.aliexpress.com",
-        ]
-    ):
+    if data:
         try:
-            timeout = aiohttp.ClientTimeout(total=8)
-
-            async with aiohttp.ClientSession(
-                timeout=timeout
-            ) as session:
-
-                # HEAD first
-                try:
-                    async with session.head(
-                        url,
-                        allow_redirects=True,
-                    ) as resp:
-
-                        final_url = str(resp.url)
-                        pid = extract_id(final_url)
-
-                        if pid:
-                            return (
-                                pid,
-                                f"https://www.aliexpress.com/item/{pid}.html",
-                            )
-                except Exception:
-                    pass
-
-                # GET fallback
-                async with session.get(
-                    url,
-                    allow_redirects=True,
-                ) as resp:
-
-                    final_url = str(resp.url)
-
-                    pid = extract_id(final_url)
-
-                    if pid:
-                        return (
-                            pid,
-                            f"https://www.aliexpress.com/item/{pid}.html",
-                        )
-
-                    if "redirectUrl=" in final_url:
-                        parsed = urlparse(final_url)
-                        query = parse_qs(parsed.query)
-
-                        redirected = query.get(
-                            "redirectUrl",
-                            [None],
-                        )[0]
-
-                        if redirected:
-                            redirected = unquote(
-                                redirected
-                            )
-
-                            pid = extract_id(
-                                redirected
-                            )
-
-                            if pid:
-                                return (
-                                    pid,
-                                    f"https://www.aliexpress.com/item/{pid}.html",
-                                )
-
-        except Exception as e:
-            logger.warning(
-                "Redirect extraction failed: %s",
-                e,
+            # Response shape varies; walk it defensively instead of
+            # assuming one fixed structure.
+            flat = json.dumps(data)
+            # look for an explicit freight/shipping amount field
+            freight_match = re.search(
+                r'"(?:freight_amount|shipping_fee|freight_fee)"\s*:\s*"?([0-9]+\.?[0-9]*)"?',
+                flat,
             )
+            if freight_match:
+                shipping_usd = float(freight_match.group(1))
+                result = (shipping_usd, "known")
+            elif '"free_shipping":true' in flat.replace(" ", ""):
+                result = (0.0, "free")
+        except (ValueError, TypeError) as e:
+            logger.warning("Could not parse shipping response: %s", e)
 
-    return None, None
-
-
-# ============================================================
-# 💰 KOOKI SHOP COMMISSION
-# ============================================================
-
-def get_commission(price_usd: float) -> int:
-    """
-    Kouki Shop service commission in DZD.
-    """
-
-    if price_usd < 3:
-        return 100
-
-    if price_usd <= 5:
-        return 150
-
-    if price_usd <= 11:
-        return 300
-
-    if price_usd <= 15:
-        return 400
-
-    if price_usd <= 18:
-        return 500
-
-    if price_usd <= 22:
-        return 600
-
-    if price_usd <= 25:
-        return 700
-
-    if price_usd <= 32:
-        return 800
-
-    if price_usd <= 38:
-        return 900
-
-    if price_usd <= 44:
-        return 1000
-
-    if price_usd <= 62:
-        return 1200
-
-    if price_usd <= 70:
-        return 1300
-
-    if price_usd <= 80:
-        return 1500
-
-    if price_usd <= 90:
-        return 1700
-
-    if price_usd <= 100:
-        return 1900
-
-    if price_usd <= 120:
-        return 2100
-
-    if price_usd <= 160:
-        return 2300
-
-    if price_usd <= 200:
-        return 2500
-
-    return 3000
+    shipping_cache[cache_key] = result
+    return result
 
 
-# ============================================================
-# 🧠 SMART PRODUCT ANALYSIS
-# ============================================================
+# ---------------------------------------------------------------------------
+# ALIEXPRESS PRODUCT LOOKUP
+# ---------------------------------------------------------------------------
 
-def parse_number(value, default=0.0) -> float:
-    """
-    Safely parse prices / numeric strings.
-
-    Supports:
-    11.93
-    1,299.99
-    11,93
-    """
-
+def get_aliexpress_client():
+    if not HAS_ALIEXPRESS_LIB:
+        return None
     try:
-        if value is None:
-            return default
-
-        text = str(value).strip()
-
-        text = re.sub(
-            r"[^\d,.\-]",
-            "",
-            text,
+        return AliexpressApi(
+            key=ALIEXPRESS_APP_KEY,
+            secret=ALIEXPRESS_APP_SECRET,
+            language=ali_models.Language.EN,
+            currency=ali_models.Currency.USD,
+            tracking_id=ALIEXPRESS_TRACKING_ID,
         )
-
-        if not text:
-            return default
-
-        if "," in text and "." in text:
-            # 1,299.99
-            if text.rfind(",") < text.rfind("."):
-                text = text.replace(",", "")
-            # 1.299,99
-            else:
-                text = text.replace(".", "")
-                text = text.replace(",", ".")
-
-        elif "," in text:
-            parts = text.split(",")
-
-            # 11,93
-            if len(parts[-1]) == 2:
-                text = text.replace(",", ".")
-            else:
-                # 1,299
-                text = text.replace(",", "")
-
-        return float(text)
-
-    except (
-        ValueError,
-        TypeError,
-    ):
-        return default
-
-
-def parse_rating(value) -> float:
-    """
-    Normalize AliExpress rating to 0-5.
-    """
-
-    try:
-        rating = parse_number(value, 0.0)
-
-        # If API returns percentage such as 96.5
-        if rating > 5:
-            rating = rating / 20
-
-        return max(
-            0.0,
-            min(rating, 5.0),
-        )
-
-    except Exception:
-        return 0.0
-
-
-def parse_sales(value) -> int:
-    """
-    Parse number of orders/sales.
-    """
-
-    try:
-        if value is None:
-            return 0
-
-        text = re.sub(
-            r"[^\d]",
-            "",
-            str(value),
-        )
-
-        return int(text) if text else 0
-
-    except (
-        ValueError,
-        TypeError,
-    ):
-        return 0
-
-
-def get_numeric_attr(obj, names):
-    """Return the first usable numeric attribute/key from an object."""
-    if obj is None:
+    except Exception as e:
+        logger.error("Failed to init AliexpressApi client: %s", e)
         return None
 
-    for name in names:
+
+_aliexpress_client = get_aliexpress_client()
+
+
+def fetch_product_details(product_id: str):
+    """Returns a dict with product info, or None if it could not be fetched."""
+    if product_id in product_cache:
+        return product_cache[product_id]
+
+    product_info = None
+
+    if _aliexpress_client:
         try:
-            if isinstance(obj, dict):
-                value = obj.get(name)
-            else:
-                value = getattr(obj, name, None)
-        except Exception:
-            value = None
+            products = _aliexpress_client.get_products(product_id)
+            if products:
+                p = products[0]
+                product_info = {
+                    "product_id": product_id,
+                    "title": getattr(p, "product_title", "AliExpress Product"),
+                    "price_usd": float(getattr(p, "target_sale_price", None) or getattr(p, "sale_price", 0) or 0),
+                    "original_price_usd": float(getattr(p, "target_original_price", None) or getattr(p, "original_price", 0) or 0),
+                    "discount": getattr(p, "discount", None),
+                    "rating": getattr(p, "evaluate_rate", None),
+                    "orders": getattr(p, "lastest_volume", None) or getattr(p, "volume", None),
+                    "image_url": getattr(p, "product_main_image_url", None),
+                    "affiliate_link": getattr(p, "promotion_link", None) or getattr(p, "product_detail_url", None),
+                    "sku_id": None,
+                }
+        except Exception as e:
+            logger.warning("get_products failed for %s: %s", product_id, e)
 
-        parsed = parse_number(value, -1.0)
-        if parsed >= 0:
-            return parsed
-
-    return None
-
-
-def extract_shipping_fee(shipping_result) -> Optional[float]:
-    """Extract shipping_fee from the official affiliate shipping response."""
-    if shipping_result is None:
-        return None
-
-    # The dedicated endpoint returns a ShippingInfo object with shipping_fee.
-    direct = get_numeric_attr(
-        shipping_result,
-        ("shipping_fee", "shippingFee", "fee", "shipping_cost"),
-    )
-    if direct is not None:
-        return round(max(0.0, direct), 2)
-
-    # Be defensive in case the SDK wraps the response in nested objects/dicts.
-    seen = set()
-    queue = [shipping_result]
-    while queue:
-        obj = queue.pop(0)
-        oid = id(obj)
-        if oid in seen:
-            continue
-        seen.add(oid)
-
-        direct = get_numeric_attr(
-            obj,
-            ("shipping_fee", "shippingFee", "fee", "shipping_cost"),
+    # Fallback to a raw signed call if the wrapper library is unavailable
+    # or returned nothing.
+    if product_info is None:
+        data = aliexpress_api_call(
+            "aliexpress.affiliate.productdetail.get",
+            {
+                "product_ids": product_id,
+                "target_currency": "USD",
+                "target_language": "EN",
+                "tracking_id": ALIEXPRESS_TRACKING_ID,
+                "ship_to_country": SHIPPING_DESTINATION_COUNTRY,
+                "fields": "product_id,product_title,target_sale_price,target_original_price,"
+                          "product_main_image_url,promotion_link,evaluate_rate,lastest_volume",
+            },
         )
-        if direct is not None:
-            return round(max(0.0, direct), 2)
+        try:
+            result = data.get("aliexpress_affiliate_productdetail_get_response", {})
+            resp = result.get("resp_result", {}).get("result", {})
+            items = resp.get("products", {}).get("product", [])
+            if items:
+                p = items[0]
+                product_info = {
+                    "product_id": product_id,
+                    "title": p.get("product_title", "AliExpress Product"),
+                    "price_usd": float(p.get("target_sale_price", 0) or 0),
+                    "original_price_usd": float(p.get("target_original_price", 0) or 0),
+                    "discount": p.get("discount"),
+                    "rating": p.get("evaluate_rate"),
+                    "orders": p.get("lastest_volume"),
+                    "image_url": p.get("product_main_image_url"),
+                    "affiliate_link": p.get("promotion_link"),
+                    "sku_id": None,
+                }
+        except (AttributeError, KeyError, TypeError) as e:
+            logger.warning("Raw product detail parse failed for %s: %s", product_id, e)
 
-        if isinstance(obj, dict):
-            values = obj.values()
-        elif isinstance(obj, (list, tuple, set)):
-            values = obj
-        else:
-            try:
-                values = vars(obj).values()
-            except Exception:
-                values = ()
+    if product_info:
+        product_cache[product_id] = product_info
 
-        for value in values:
-            if isinstance(value, (dict, list, tuple, set)) or hasattr(value, "__dict__"):
-                queue.append(value)
-
-    return None
-
-
-def get_sku_id(details):
-    """Get the SKU id required by the country-specific shipping API."""
-    for field in ("sku_id", "skuId", "product_sku_id", "productSkuId"):
-        value = getattr(details, field, None)
-        if value not in (None, "", 0, "0"):
-            return value
-    return None
+    return product_info
 
 
-def analyze_smart_data(
-    rating: str,
-    price_usd: float,
-    original_usd: float,
-    sales: str,
-    estimated_checkout_usd: Optional[float] = None,
-    shipping_usd: float = 0.0,
-    shipping_confirmed: bool = False,
-) -> dict:
+# ---------------------------------------------------------------------------
+# PRICING ENGINE
+# ---------------------------------------------------------------------------
+
+def calculate_final_price(product_price_usd: float, shipping_usd: float):
     """
-    Complete product analysis.
+    PRODUCT PRICE
+    + 14% BUFFER            (buffer applies to product price ONLY)
+    + SHIPPING TO ALGERIA
+    + KOUKI SHOP COMMISSION
+    = FINAL CUSTOMER PRICE
 
-    IMPORTANT:
-    target_sale_price from the Affiliate API is NOT guaranteed
-    to equal the final Checkout price.
-
-    Therefore estimated_checkout_usd is calculated using
-    CHECKOUT_BUFFER.
+    Returns a dict with every intermediate value so the caller can display
+    a full breakdown.
     """
+    buffer_amount_usd = product_price_usd * PRODUCT_BUFFER_RATE
+    buffered_product_price_usd = product_price_usd * (1 + PRODUCT_BUFFER_RATE)
 
-    # --------------------------------------------------------
-    # Rating
-    # --------------------------------------------------------
+    subtotal_usd = buffered_product_price_usd + shipping_usd
+    subtotal_dzd = subtotal_usd * USD_TO_DZD_RATE
 
-    r = parse_rating(rating)
+    commission_dzd = COMMISSION_FLAT_DZD + (subtotal_dzd * COMMISSION_PERCENT)
 
-    # --------------------------------------------------------
-    # Sales / Orders
-    # --------------------------------------------------------
-
-    s_count = parse_sales(sales)
-
-    # --------------------------------------------------------
-    # Prices
-    # --------------------------------------------------------
-
-    price_usd = parse_number(
-        price_usd,
-        0.0,
-    )
-
-    original_usd = parse_number(
-        original_usd,
-        price_usd,
-    )
-
-    if price_usd < 0:
-        price_usd = 0.0
-
-    if original_usd < price_usd:
-        original_usd = price_usd
-
-    # --------------------------------------------------------
-    # Discount
-    # --------------------------------------------------------
-
-    if (
-        original_usd > price_usd
-        and original_usd > 0
-    ):
-        discount = round(
-            (1 - price_usd / original_usd) * 100
-        )
-
-        discount = max(
-            0,
-            min(discount, 99),
-        )
-    else:
-        discount = 0
-
-    # --------------------------------------------------------
-    # Checkout Buffer
-    # --------------------------------------------------------
-
-    buffer_value = max(
-        1.0,
-        CHECKOUT_BUFFER,
-    )
-
-    max_buffer = max(
-        buffer_value,
-        MAX_CHECKOUT_BUFFER,
-    )
-
-    if estimated_checkout_usd is None:
-        estimated_checkout_usd = (
-            price_usd * buffer_value
-        )
-
-    estimated_checkout_usd = max(
-        price_usd,
-        parse_number(
-            estimated_checkout_usd,
-            price_usd,
-        ),
-    )
-
-    # Don't let the estimate exceed our configured safety limit.
-    if price_usd > 0:
-        estimated_checkout_usd = min(
-            estimated_checkout_usd,
-            price_usd * max_buffer,
-        )
-
-    estimated_checkout_usd = round(
-        estimated_checkout_usd,
-        2,
-    )
-
-    # --------------------------------------------------------
-    # Deal score /10
-    # --------------------------------------------------------
-
-    rating_score = (
-        r / 5.0
-    ) * 5
-
-    discount_score = min(
-        (discount / 50.0) * 5,
-        5,
-    )
-
-    score_out_of_10 = round(
-        rating_score + discount_score,
-        1,
-    )
-
-    score_out_of_10 = max(
-        0.0,
-        min(score_out_of_10, 10.0),
-    )
-
-    # --------------------------------------------------------
-    # Fraud / quality warning
-    # --------------------------------------------------------
-
-    if r >= 4.9 and s_count < 10:
-
-        fake_warning = (
-            "🚨 <b>تحذير:</b> تقييم مرتفع جداً "
-            "مع عدد طلبات قليل."
-        )
-
-    elif (
-        price_usd < 1.0
-        and r >= 4.8
-        and original_usd > 15
-    ):
-
-        fake_warning = (
-            "🚨 <b>تحذير:</b> تخفيض غير منطقي "
-            "مقارنة بالسعر الأصلي."
-        )
-
-    elif s_count > 500 and r < 4.0:
-
-        fake_warning = (
-            "⚠️ <b>احذر:</b> مبيعات كثيرة "
-            "لكن التقييم منخفض."
-        )
-
-    elif s_count == 0:
-
-        fake_warning = (
-            "ℹ️ <b>ملاحظة:</b> عدد الطلبات "
-            "غير متوفر في بيانات API."
-        )
-
-    else:
-
-        fake_warning = (
-            "✔️ <b>سليم:</b> لا توجد مؤشرات غش واضحة "
-            "ضمن البيانات المتاحة."
-        )
-
-    # --------------------------------------------------------
-    # Shipping
-    # --------------------------------------------------------
-    shipping_usd = max(0.0, parse_number(shipping_usd, 0.0))
-
-    if shipping_usd > 0:
-        shipping = (
-            f"🚚 <b>الشحن إلى الجزائر:</b> + ${shipping_usd:.2f}"
-        )
-    elif shipping_confirmed:
-        shipping = (
-            "🚚 <b>الشحن إلى الجزائر:</b> مجاني مؤكّد"
-        )
-    else:
-        shipping = (
-            "🚚 <b>الشحن إلى الجزائر:</b> غير متوفر في API — يتحقق عند الدفع"
-        )
-
-    # --------------------------------------------------------
-    # DZD calculations
-    # --------------------------------------------------------
-
-    # Raw API price
-    api_price_dzd = round(
-        price_usd * USD_TO_DZD
-    )
-
-    # Estimated Checkout price
-    # Final estimated checkout = product price + 14% buffer + shipping
-    final_checkout_usd = round(
-        estimated_checkout_usd + shipping_usd, 2
-    )
-
-    checkout_dzd = round(
-        final_checkout_usd * USD_TO_DZD
-    )
-
-    # Calculate Kouki commission using estimated checkout
-    commission = get_commission(
-        final_checkout_usd
-    )
-
-    # Final amount charged by Kouki Shop
-    final_buy_dzd = (
-        checkout_dzd
-        + commission
-    )
-
-    # --------------------------------------------------------
-    # Suggested reseller price
-    # --------------------------------------------------------
-
-    suggested_sell = (
-        round(
-            (
-                final_buy_dzd
-                * RESELLER_MARKUP
-            ) / 100
-        ) * 100
-    )
-
-    profit = max(
-        0,
-        suggested_sell - final_buy_dzd,
-    )
-
-    # --------------------------------------------------------
-    # Deal status
-    # --------------------------------------------------------
-
-    if r >= 4.8 and discount >= 40:
-
-        status = "💎 صفقة نادرة (لقطة)"
-
-    elif r >= 4.5 and discount >= 25:
-
-        status = "🔥 صفقة قوية"
-
-    elif r >= 4.0:
-
-        status = "✅ منتج موثوق"
-
-    elif r > 0:
-
-        status = "⚠️ منتج عادي"
-
-    else:
-
-        status = "ℹ️ بيانات التقييم غير متوفرة"
-
-    # --------------------------------------------------------
-    # Buffer percentage
-    # --------------------------------------------------------
-
-    if price_usd > 0:
-
-        buffer_percent = round(
-            (
-                estimated_checkout_usd
-                / price_usd
-                - 1
-            ) * 100
-        )
-
-    else:
-
-        buffer_percent = 0
+    final_price_dzd = subtotal_dzd + commission_dzd
 
     return {
-        "status": status,
-
-        "score_10": score_out_of_10,
-
-        "fake_alert": fake_warning,
-
-        "shipping": shipping,
-
-        # Raw API price
-        "api_price_usd": round(
-            price_usd,
-            2,
-        ),
-
-        "api_price_dzd": api_price_dzd,
-
-        # Estimated Checkout
-        "estimated_checkout_usd":
-            estimated_checkout_usd,
-
-        "checkout_dzd":
-            checkout_dzd,
-
-        "checkout_buffer_percent":
-            buffer_percent,
-
-        # Kouki Shop
-        "commission":
-            commission,
-
-        "buy_dzd":
-            final_buy_dzd,
-
-        "final_dzd":
-            final_buy_dzd,
-
-        # Reseller
-        "sell_dzd":
-            suggested_sell,
-
-        "profit_dzd":
-            profit,
-
-        # Shipping / price breakdown
-        "shipping_usd":
-            shipping_usd,
-        "final_checkout_usd":
-            final_checkout_usd,
-        "buffer_usd":
-            round(
-                max(0.0, estimated_checkout_usd - price_usd),
-                2,
-            ),
-
-        # Orders
-        "orders":
-            s_count,
+        "product_price_usd": round(product_price_usd, 2),
+        "buffer_amount_usd": round(buffer_amount_usd, 2),
+        "buffered_product_price_usd": round(buffered_product_price_usd, 2),
+        "shipping_usd": round(shipping_usd, 2),
+        "subtotal_usd": round(subtotal_usd, 2),
+        "subtotal_dzd": round(subtotal_dzd, 2),
+        "commission_dzd": round(commission_dzd, 2),
+        "final_price_dzd": round(final_price_dzd, 2),
     }
 
 
-# ============================================================
-# 🖼️ PROFESSIONAL PRODUCT IMAGE
-# ============================================================
-
-async def create_pro_image(
-    image_url: str,
-    price_usd: str,
-    price_dzd: str,
-    discount: str,
-) -> Optional[io.BytesIO]:
-
-    if not image_url:
-        return None
-
-    try:
-
-        timeout = aiohttp.ClientTimeout(
-            total=10
-        )
-
-        async with aiohttp.ClientSession(
-            timeout=timeout
-        ) as session:
-
-            async with session.get(
-                image_url
-            ) as resp:
-
-                if resp.status != 200:
-                    return None
-
-                image_data = await resp.read()
-
-        img = Image.open(
-            io.BytesIO(image_data)
-        ).convert("RGBA")
-
-        draw = ImageDraw.Draw(img)
-
-        w, h = img.size
-
-        border_w = max(
-            2,
-            int(w * 0.02)
-        )
-
-        draw.rectangle(
-            [0, 0, w, h],
-            outline=(232, 25, 35, 200),
-            width=border_w,
-        )
-
-        bar_h = max(
-            80,
-            int(h * 0.20)
-        )
-
-        draw.rectangle(
-            [0, h - bar_h, w, h],
-            fill=(232, 25, 35, 240),
-        )
-
-        try:
-
-            font_l = ImageFont.load_default(
-                size=max(
-                    18,
-                    int(bar_h * 0.35)
-                )
-            )
-
-            font_s = ImageFont.load_default(
-                size=max(
-                    14,
-                    int(bar_h * 0.18)
-                )
-            )
-
-        except Exception:
-
-            font_l = ImageFont.load_default()
-            font_s = ImageFont.load_default()
-
-        draw.text(
-            (
-                w * 0.05,
-                h - bar_h + bar_h * 0.08,
-            ),
-            f"{price_usd}$",
-            fill="white",
-            font=font_l,
-        )
-
-        draw.text(
-            (
-                w * 0.05,
-                h - bar_h + bar_h * 0.58,
-            ),
-            f"~ {price_dzd} DZD",
-            fill="yellow",
-            font=font_s,
-        )
-
-        if discount:
-
-            draw.text(
-                (
-                    w * 0.45,
-                    h - bar_h + bar_h * 0.30,
-                ),
-                f"-{discount}% OFF",
-                fill="white",
-                font=font_l,
-            )
-
-        # Watermark
-        text = "KOUKI SHOP"
-
-        text_bbox = draw.textbbox(
-            (0, 0),
-            text,
-            font=font_l,
-        )
-
-        text_w = (
-            text_bbox[2]
-            - text_bbox[0]
-        )
-
-        padding = int(
-            w * 0.05
-        )
-
-        draw.text(
-            (
-                w - text_w - padding,
-                h * 0.05,
-            ),
-            text,
-            fill=(0, 0, 0, 180),
-            font=font_l,
-        )
-
-        output = io.BytesIO()
-
-        img.convert("RGB").save(
-            output,
-            format="JPEG",
-            quality=95,
-        )
-
-        output.seek(0)
-
-        return output
-
-    except Exception as e:
-
-        logger.warning(
-            "Image generation failed: %s",
-            e,
-        )
-
-        return None
-
-
-# ============================================================
-# 🔍 FETCH PRODUCT
-# ============================================================
-
-async def fetch_product_data(
-    pid: str,
-    item_url: str,
-    full_links: bool = True,
-):
-    """
-    Fetch AliExpress product data.
-
-    full_links=True is used by the Telegram bot.
-    The API endpoint can use the same function.
-    """
-
-    loop = asyncio.get_event_loop()
-
-    jobs = [
-        loop.run_in_executor(
-            None,
-            lambda: aliexpress.get_products_details(
-                [pid],
-                country=SHIP_TO_COUNTRY,
-            ),
-        ),
-    ]
-
-    if full_links:
-
-        jobs.extend([
-
-            # Coins
-            loop.run_in_executor(
-                None,
-                lambda: aliexpress.get_affiliate_links(
-                    f"https://m.aliexpress.com/p/"
-                    f"coin-index/index.html?"
-                    f"productIds={pid}"
-                ),
-            ),
-
-            # Super Deals
-            loop.run_in_executor(
-                None,
-                lambda: aliexpress.get_affiliate_links(
-                    f"https://star.aliexpress.com/share/"
-                    f"share.htm?redirectUrl="
-                    f"{item_url}?sourceType=562"
-                ),
-            ),
-
-            # Limited
-            loop.run_in_executor(
-                None,
-                lambda: aliexpress.get_affiliate_links(
-                    f"https://star.aliexpress.com/share/"
-                    f"share.htm?redirectUrl="
-                    f"{item_url}?sourceType=561"
-                ),
-            ),
-
-            # Bundle
-            loop.run_in_executor(
-                None,
-                lambda: aliexpress.get_affiliate_links(
-                    f"https://star.aliexpress.com/share/"
-                    f"share.htm?redirectUrl="
-                    f"https://www.aliexpress.com/ssr/"
-                    f"300000512/BundleDeals2?"
-                    f"productIds={pid}"
-                ),
-            ),
-
-            # Big Save
-            loop.run_in_executor(
-                None,
-                lambda: aliexpress.get_affiliate_links(
-                    f"https://star.aliexpress.com/share/"
-                    f"share.htm?redirectUrl="
-                    f"{item_url}?sourceType=680"
-                ),
-            ),
-        ])
-
-    results = await asyncio.gather(
-        *jobs,
-        return_exceptions=True,
-    )
-
-    details_result = results[0]
-
-    if (
-        isinstance(
-            details_result,
-            Exception,
-        )
-        or not details_result
-    ):
-        return None
-
-    try:
-
-        details = details_result[0]
-
-    except (
-        IndexError,
-        TypeError,
-    ):
-
-        return None
-
-    if not details:
-        return None
-
-    # --------------------------------------------------------
-    # Price
-    # --------------------------------------------------------
-
-    price_usd_str = getattr(
-        details,
-        "target_sale_price",
-        None,
-    )
-
-    if not price_usd_str:
-
-        price_usd_str = getattr(
-            details,
-            "sale_price",
-            None,
-        )
-
-    if not price_usd_str:
-
-        price_usd_str = getattr(
-            details,
-            "original_price",
-            "0",
-        )
-
-    orig_usd_str = getattr(
-        details,
-        "original_price",
-        price_usd_str,
-    )
-
-    p_float = parse_number(
-        price_usd_str,
-        0.0,
-    )
-
-    o_float = parse_number(
-        orig_usd_str,
-        p_float,
-    )
-
-    if o_float < p_float:
-        o_float = p_float
-
-    # --------------------------------------------------------
-    # Rating
-    # --------------------------------------------------------
-
-    rate = str(
-        getattr(
-            details,
-            "evaluate_rate",
-            getattr(
-                details,
-                "rating",
-                "0",
-            ),
-        )
-        or "0"
-    )
-
-    # --------------------------------------------------------
-    # Orders
-    # IMPORTANT:
-    # Do NOT use target_sale_price_currency.
-    # That field is currency, not sales count.
-    # --------------------------------------------------------
-
-    sales_value = None
-
-    sales_fields = [
-        "orders",
-        "order_count",
-        "sales_count",
-        "trade_count",
-        "total_orders",
-    ]
-
-    for field in sales_fields:
-
-        value = getattr(
-            details,
-            field,
-            None,
-        )
-
-        if value not in (
-            None,
-            "",
-            "0",
-            0,
-        ):
-
-            sales_value = value
-            break
-
-    if sales_value is None:
-        sales_value = "0"
-
-    sales = str(sales_value)
-
-    # --------------------------------------------------------
-    # Discount
-    # --------------------------------------------------------
-
-    if (
-        o_float > p_float
-        and o_float > 0
-    ):
-
-        discount_val = round(
-            (
-                1
-                - p_float / o_float
-            ) * 100
-        )
-
-        discount_val = max(
-            0,
-            min(discount_val, 99),
-        )
-
-    else:
-
-        discount_val = 0
-
-    # --------------------------------------------------------
-    # Checkout buffer + country-specific shipping
-    # --------------------------------------------------------
-
-    # IMPORTANT: the 14% buffer is applied ONLY to the product price.
-    # Shipping is then added separately using the AliExpress affiliate
-    # shipping-info endpoint for Algeria (DZ) and the product SKU.
-    estimated_checkout_usd = round(
-        p_float * max(
-            1.0,
-            CHECKOUT_BUFFER,
-        ),
-        2,
-    )
-
-    shipping_usd = 0.0
-    shipping_confirmed = False
-    shipping_source = "unavailable"
-    sku_id = get_sku_id(details)
-
-    # The current maintained package may not contain the shipping endpoint,
-    # so use getattr rather than crashing older deployments. The Render
-    # requirements below install the branch that adds this method.
-    shipping_method = getattr(
-        aliexpress,
-        "get_affiliate_product_shipping_info",
-        None,
-    )
-
-    if callable(shipping_method) and sku_id not in (None, "", 0, "0"):
-        try:
-            shipping_result = await asyncio.get_running_loop().run_in_executor(
-                None,
-                lambda: shipping_method(
-                    product_id=int(pid),
-                    sku_id=int(sku_id),
-                    ship_to_country=SHIP_TO_COUNTRY,
-                    target_currency="USD",
-                    target_sale_price=str(p_float),
-                    tax_rate=SHIPPING_TAX_RATE,
-                ),
-            )
-            fee = extract_shipping_fee(shipping_result)
-            if fee is not None:
-                shipping_usd = fee
-                shipping_confirmed = True
-                shipping_source = "affiliate_shipping_api"
-        except Exception as e:
-            logger.warning(
-                "Country-specific shipping lookup failed for %s: %s",
-                pid,
-                e,
-            )
-
-    # Last-resort fallback only if the product detail itself exposes a
-    # numeric fee. This is NOT treated as Algeria-confirmed shipping.
-    if not shipping_confirmed:
-        for field in (
-            "shipping_fee", "shipping_cost", "shipping_price",
-            "freight", "delivery_fee", "shipping_fee_usd"
-        ):
-            value = getattr(details, field, None)
-            parsed = parse_number(value, -1.0)
-            if parsed >= 0:
-                shipping_usd = parsed
-                shipping_source = "product_detail_fallback"
-                break
-
-    smart_data = analyze_smart_data(
-        rating=rate,
-        price_usd=p_float,
-        original_usd=o_float,
-        sales=sales,
-        estimated_checkout_usd=estimated_checkout_usd,
-        shipping_usd=shipping_usd,
-        shipping_confirmed=shipping_confirmed,
-    )
-
-    # --------------------------------------------------------
-    # Common details
-    # --------------------------------------------------------
-
-    title = getattr(
-        details,
-        "product_title",
-        "منتج AliExpress",
-    ) or "منتج AliExpress"
-
-    image_url = getattr(
-        details,
-        "product_main_image_url",
-        "",
-    ) or ""
-
-    store_name = getattr(
-        details,
-        "shop_name",
-        getattr(
-            details,
-            "store_name",
-            "AliExpress",
-        ),
-    ) or "AliExpress"
-
-    # --------------------------------------------------------
-    # Links
-    # --------------------------------------------------------
-
-    buy_link = item_url
-    coin_link = item_url
-    super_link = item_url
-    limited_link = item_url
-    bundle_link = item_url
-    bigsave_link = item_url
-
-    if full_links:
-
-        buy_link = get_safe_link(
-            results[1],
-            item_url,
-        )
-
-        coin_link = get_safe_link(
-            results[1],
-            item_url,
-        )
-
-        super_link = get_safe_link(
-            results[2],
-            item_url,
-        )
-
-        limited_link = get_safe_link(
-            results[3],
-            item_url,
-        )
-
-        bundle_link = get_safe_link(
-            results[4],
-            item_url,
-        )
-
-        bigsave_link = get_safe_link(
-            results[5],
-            item_url,
-        )
-
-    else:
-
-        # Buy affiliate link only
-        buy_link = get_safe_link(
-            results[1],
-            item_url,
-        ) if len(results) > 1 else item_url
-
-    # --------------------------------------------------------
-    # Final data
-    # --------------------------------------------------------
-
-    data = {
-        "product_id": pid,
-
-        "title": str(title)[:100],
-
-        "price_usd": round(
-            p_float,
-            2,
-        ),
-
-        "orig_usd": round(
-            o_float,
-            2,
-        ),
-
-        "disc": str(
-            discount_val
-        ),
-
-        "rate": rate,
-
-        "orders": smart_data[
-            "orders"
-        ],
-
-        "img": image_url,
-
-        "buy": buy_link,
-
-        "coin": coin_link,
-
-        "super": super_link,
-
-        "limited": limited_link,
-
-        "bundle": bundle_link,
-
-        "bigsave": bigsave_link,
-
-        "sourceUrl": item_url,
-
-        "store_name": store_name,
-
-        # Raw API price
-        "api_price_dzd":
-            smart_data[
-                "api_price_dzd"
-            ],
-
-        # Estimated Checkout
-        "estimated_checkout_usd":
-            smart_data[
-                "estimated_checkout_usd"
-            ],
-
-        "product_buffer_usd":
-            smart_data[
-                "buffer_usd"
-            ],
-
-        "final_checkout_usd":
-            smart_data[
-                "final_checkout_usd"
-            ],
-
-        "shipping_usd":
-            shipping_usd,
-
-        "shipping_confirmed":
-            shipping_confirmed,
-
-        "shipping_source":
-            shipping_source,
-
-        "shipping_source_detail":
-            shipping_source,
-
-        "ship_to_country":
-            SHIP_TO_COUNTRY,
-
-        "checkout_dzd":
-            smart_data[
-                "checkout_dzd"
-            ],
-
-        "checkout_buffer_percent":
-            smart_data[
-                "checkout_buffer_percent"
-            ],
-
-        # Kouki Shop
-        "base_dzd":
-            smart_data[
-                "checkout_dzd"
-            ],
-
-        "commission":
-            smart_data[
-                "commission"
-            ],
-
-        "buy_dzd":
-            smart_data[
-                "buy_dzd"
-            ],
-
-        "final_dzd":
-            smart_data[
-                "final_dzd"
-            ],
-
-        # Reseller
-        "sell_dzd":
-            smart_data[
-                "sell_dzd"
-            ],
-
-        "profit_dzd":
-            smart_data[
-                "profit_dzd"
-            ],
-
-        # Analysis
-        "status":
-            smart_data[
-                "status"
-            ],
-
-        "score_10":
-            smart_data[
-                "score_10"
-            ],
-
-        "fake_alert":
-            smart_data[
-                "fake_alert"
-            ],
-
-        "shipping":
-            smart_data[
-                "shipping"
-            ],
-    }
-
-    return data
-
-
-# ============================================================
-# 🤖 TELEGRAM RESPONSE
-# ============================================================
-
-async def send_pro_response(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-    data: dict,
-):
-
-    keyboard = [
-
-        [
-            InlineKeyboardButton(
-                f"🛒 اشتري الآن "
-                f"({data['buy_dzd']:,} دج)",
-                url=data["buy"],
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "🪙 العملات",
-                url=data["coin"],
-            ),
-
-            InlineKeyboardButton(
-                "⚡ سوبر ديلز",
-                url=data["super"],
-            ),
-        ],
-
-        [
-            InlineKeyboardButton(
-                "📦 عروض Bundle",
-                url=data["bundle"],
-            ),
-
-            InlineKeyboardButton(
-                "⏱️ عرض محدود",
-                url=data["limited"],
-            ),
-        ],
-
-        [
-            InlineKeyboardButton(
-                "🏷️ تخفيض Big Save",
-                url=data["bigsave"],
-            )
-        ],
-
-        [
-            InlineKeyboardButton(
-                "💬 تواصل معي للطلب عبر فيسبوك",
-                url=FACEBOOK_URL,
-            )
-        ],
-    ]
-
-    caption = f"""
-🤖 <b>تقرير خبير Kouki Shop:</b>
-{data['status']}
-
-🔹 <b>{data['title']}</b>
-
-💵 <b>سعر AliExpress:</b>
-{data['price_usd']}$ <s>{data['orig_usd']}$</s>
-(-{data['disc']}%)
-
-💳 <b>حساب السعر:</b>
-• سعر المنتج: <b>${data['price_usd']:.2f}</b>
-• Buffer 14%: <b>+${data.get('product_buffer_usd', 0):.2f}</b>
-• الشحن إلى الجزائر: <b>+${data.get('shipping_usd', 0):.2f}</b>
-• الإجمالي قبل العمولة: <b>${data.get('final_checkout_usd', data['estimated_checkout_usd']):.2f}</b>
-
-⭐ <b>التقييم:</b>
-{data['rate']}/5.0
-
-🌟 <b>جودة الصفقة:</b>
-{data['score_10']}/10
-
-🛒 <b>الطلبات:</b>
-{data['orders']:,}
-
-{data['shipping']}
-
-🛡️ <b>نظام كشف الغش:</b>
-{data['fake_alert']}
-
-💰 <b>حساب Kouki Shop:</b>
-
-📦 سعر Checkout المتوقع:
-<b>{data['checkout_dzd']:,} دج</b>
-
-💼 عمولة الخدمة:
-<b>+{data['commission']:,} دج</b>
-
-━━━━━━━━━━━━━━
-
-💳 <b>السعر النهائي التقريبي:</b>
-<b>{data['buy_dzd']:,} دج</b>
-
-📤 <b>سعر البيع المقترح:</b>
-<b>{data['sell_dzd']:,} دج</b>
-
-💰 <b>الفائدة:</b>
-~{data['profit_dzd']:,} دج
-
-━━━━━━━━━━━━━━
-
-⚠️ <b>ملاحظة مهمة:</b>
-السعر النهائي في AliExpress قد يختلف عند الدفع بسبب الكوبونات، الـSKU، بلد الشحن، الضرائب أو العروض المتاحة في حسابك.
-
-📊 هامش الحماية المستخدم:
-<b>+{data['checkout_buffer_percent']}%</b>
-
-👇 <b>اختر رابط التخفيض المناسب لك:</b>
-"""
-
-    pro_img = await create_pro_image(
-        data["img"],
-        str(data.get("final_checkout_usd", data["estimated_checkout_usd"])),
-        str(data["buy_dzd"]).replace(
-            ",",
-            "",
-        ),
-        data["disc"],
-    )
-
-    try:
-
-        await context.bot.send_photo(
-            chat_id=update.effective_chat.id,
-            photo=(
-                pro_img
-                if pro_img
-                else data["img"]
-            ),
-            caption=caption,
-            reply_markup=InlineKeyboardMarkup(
-                keyboard
-            ),
-            parse_mode=ParseMode.HTML,
-        )
-
-    except Exception as e:
-
-        logger.error(
-            "Telegram send error: %s",
-            e,
-        )
-
-        await update.message.reply_text(
-            caption,
-            reply_markup=InlineKeyboardMarkup(
-                keyboard
-            ),
-            parse_mode=ParseMode.HTML,
-        )
-
-
-# ============================================================
-# 📩 TELEGRAM MESSAGE HANDLER
-# ============================================================
-
-async def handle_message(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
-    if not update.message:
-        return
-
-    text = update.message.text or ""
-
-    pid, item_url = await extract_product_info(
-        text
-    )
-
-    if not pid or not item_url:
-
-        if LINK_REGEX.search(text):
-
-            await update.message.reply_text(
-                "❌ الرابط غير صالح."
-            )
-
-        return
-
-    # --------------------------------------------------------
-    # Cache
-    # --------------------------------------------------------
-
-    cached = product_cache.get(pid)
-
-    if cached:
-
-        cache_age = (
-            time.time()
-            - cached.get(
-                "time",
-                0,
-            )
-        )
-
-        if cache_age < CACHE_TTL:
-
-            await send_pro_response(
-                update,
-                context,
-                cached["data"],
-            )
-
-            return
-
-    sent_msg = await update.message.reply_text(
-        "🔎 خبير الشراء يجهز التقرير الشامل..."
-    )
-
-    try:
-
-        data = await fetch_product_data(
-            pid,
-            item_url,
-            full_links=True,
-        )
-
-        if not data:
-
-            await sent_msg.edit_text(
-                "❌ لم أجد بيانات المنتج."
-            )
-
-            return
-
-        product_cache[pid] = {
-            "data": data,
-            "time": time.time(),
-        }
-
-        try:
-            await sent_msg.delete()
-        except Exception:
-            pass
-
-        await send_pro_response(
-            update,
-            context,
-            data,
-        )
-
-    except Exception as e:
-
-        logger.exception(
-            "Product analysis failed"
-        )
-
-        try:
-
-            await sent_msg.edit_text(
-                "⚠️ حدث خطأ أثناء تحليل المنتج."
-            )
-
-        except Exception:
-            pass
-
-
-# ============================================================
-# /START
-# ============================================================
-
-async def start_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-
-    msg = """
-👋 أهلاً بك في <b>Kouki Shop Bot</b>!
-
-🛍️ أرسل رابط أي منتج من AliExpress.
-
-🤖 سيقوم البوت بـ:
-• تحليل المنتج
-• حساب الخصم
-• عرض التقييم
-• عرض عدد الطلبات
-• تقدير سعر Checkout
-• حساب عمولة Kouki Shop
-• حساب السعر النهائي بالدينار
-• إعطائك روابط Coins / Super Deals / Bundle / Big Save
-
-💡 <b>ملاحظة:</b>
-سعر Checkout تقديري وقد يتغير حسب الكوبونات والـSKU وبلد الشحن وحسابك.
-"""
-
+def suggested_resale_price_dzd(final_price_dzd: float, markup: float = 0.15):
+    return round(final_price_dzd * (1 + markup), 2)
+
+
+# ---------------------------------------------------------------------------
+# MESSAGE FORMATTING (Arabic UI, preserved style)
+# ---------------------------------------------------------------------------
+
+def format_shipping_line(shipping_usd, shipping_status: str):
+    if shipping_status == "free":
+        return "🚚 الشحن إلى الجزائر: مجاني"
+    if shipping_status == "known" and shipping_usd is not None:
+        return f"🚚 الشحن إلى الجزائر: +${shipping_usd:.2f}"
+    return "🚚 الشحن إلى الجزائر: غير محسوب — يتحقق عند الدفع"
+
+
+def format_product_message(product: dict, pricing: dict, shipping_status: str):
+    lines = []
+    lines.append(f"🛍️ <b>{product.get('title', 'منتج AliExpress')}</b>")
+    lines.append("")
+    lines.append(f"🛒 سعر المنتج: ${pricing['product_price_usd']:.2f}")
+    lines.append(f"📈 Buffer 14%: +${pricing['buffer_amount_usd']:.2f}")
+    lines.append(format_shipping_line(pricing["shipping_usd"] if shipping_status != "unknown" else None, shipping_status))
+    lines.append(f"💵 السعر قبل العمولة: ${pricing['subtotal_usd']:.2f}")
+    lines.append(f"🏷️ عمولة Kouki Shop: {pricing['commission_dzd']:.0f} DZD")
+    lines.append(f"💰 السعر النهائي: {pricing['final_price_dzd']:.0f} DZD")
+
+    if product.get("rating"):
+        lines.append("")
+        lines.append(f"⭐ التقييم: {product['rating']}")
+    if product.get("orders"):
+        lines.append(f"📦 عدد الطلبات: {product['orders']}")
+    if product.get("discount"):
+        lines.append(f"🔥 الخصم: {product['discount']}")
+
+    resale = suggested_resale_price_dzd(pricing["final_price_dzd"])
+    lines.append("")
+    lines.append(f"💡 سعر إعادة البيع المقترح: {resale:.0f} DZD")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# TELEGRAM HANDLERS
+# ---------------------------------------------------------------------------
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        msg,
-        parse_mode=ParseMode.HTML,
+        "👋 أهلاً بك في Kouki Shop!\n\n"
+        "أرسل رابط منتج من AliExpress وسأقوم بحساب السعر النهائي بالدينار الجزائري "
+        "مع الشحن والعمولة."
     )
 
 
-# ============================================================
-# 🌐 FASTAPI
-# ============================================================
-
-api_app = FastAPI(
-    title="Kouki Shop AliExpress API",
-    version="2.0.0",
-)
-
-api_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-class LinkRequest(BaseModel):
-    url: str
-
-
-# ============================================================
-# /product
-# ============================================================
-
-@api_app.get("/product")
-async def product_api(
-    url: str,
-):
-
-    pid, item_url = await extract_product_info(
-        url
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "أرسل رابط منتج AliExpress (رابط كامل أو مختصر) وسأرد عليك بالتفاصيل والسعر النهائي."
     )
 
-    if not pid:
 
-        return {
-            "error": "Invalid AliExpress URL"
-        }
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text or ""
+    links = extract_aliexpress_links(text)
 
-    # --------------------------------------------------------
-    # Cache
-    # --------------------------------------------------------
+    if not links:
+        return  # not an AliExpress link, ignore silently
 
-    cached = product_cache.get(pid)
+    for link in links:
+        await process_link(update, link)
 
-    if cached:
 
-        cache_age = (
-            time.time()
-            - cached.get(
-                "time",
-                0,
-            )
+async def process_link(update: Update, link: str):
+    status_msg = await update.message.reply_text("🔎 جاري تحليل المنتج ...")
+
+    product_id, resolved_url = extract_product_id(link)
+    if not product_id:
+        await status_msg.edit_text("⚠️ لم أتمكن من التعرف على المنتج من هذا الرابط.")
+        return
+
+    product = fetch_product_details(product_id)
+    if not product or not product.get("price_usd"):
+        await status_msg.edit_text(
+            "⚠️ تعذر جلب بيانات هذا المنتج حالياً (قد يكون رابط غير صالح أو مشكلة مؤقتة في AliExpress API)."
         )
+        return
 
-        if cache_age < CACHE_TTL:
+    shipping_usd, shipping_status = fetch_shipping_to_algeria(product_id, product.get("sku_id"))
 
-            return dict(
-                cached["data"]
-            )
+    pricing = calculate_final_price(
+        product_price_usd=product["price_usd"],
+        shipping_usd=shipping_usd if shipping_status in ("known", "free") else 0.0,
+    )
 
-    # --------------------------------------------------------
-    # Fetch
-    # --------------------------------------------------------
+    message_text = format_product_message(product, pricing, shipping_status)
+
+    keyboard = None
+    if product.get("affiliate_link"):
+        keyboard = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🛒 اشترِ الآن", url=product["affiliate_link"])]]
+        )
 
     try:
-
-        data = await fetch_product_data(
-            pid,
-            item_url,
-            full_links=False,
-        )
-
-        if not data:
-
-            return {
-                "error":
-                    "Product not found"
-            }
-
-        product_cache[pid] = {
-            "data": data,
-            "time": time.time(),
-        }
-
-        return data
-
+        if product.get("image_url"):
+            await update.message.reply_photo(
+                photo=product["image_url"],
+                caption=message_text,
+                parse_mode=ParseMode.HTML,
+                reply_markup=keyboard,
+            )
+            await status_msg.delete()
+        else:
+            await status_msg.edit_text(message_text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
     except Exception as e:
+        logger.warning("Failed to send photo, falling back to text: %s", e)
+        await status_msg.edit_text(message_text, parse_mode=ParseMode.HTML, reply_markup=keyboard)
 
-        logger.exception(
-            "API product error"
-        )
 
-        return {
-            "error": str(e)
-        }
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logger.error("Update %s caused error: %s", update, context.error)
 
 
-# ============================================================
-# /analyze
-# ============================================================
+# ---------------------------------------------------------------------------
+# OPTIONAL: FASTAPI HEALTH ENDPOINT (Render web service compatibility)
+# Runs in a background thread alongside the polling bot so Render's health
+# checks succeed even though the bot itself uses long-polling.
+# ---------------------------------------------------------------------------
 
-@api_app.post("/analyze")
-async def analyze_api(
-    req: LinkRequest,
-):
-
-    return await product_api(
-        req.url
-    )
-
-
-# ============================================================
-# PAYPAL
-# ============================================================
-
-class PayPalOrderRequest(BaseModel):
-    amount: float
-
-
-class PayPalCaptureRequest(BaseModel):
-    order_id: str
-    product_details: dict = Field(default_factory=dict)
-
-
-PAYPAL_CLIENT_ID = "PASTE_YOUR_PAYPAL_CLIENT_ID_HERE"
-
-PAYPAL_SECRET_KEY = "PASTE_YOUR_PAYPAL_SECRET_KEY_HERE"
-
-
-def get_paypal_basic_auth():
-
-    auth_str = (
-        f"{PAYPAL_CLIENT_ID}:"
-        f"{PAYPAL_SECRET_KEY}"
-    )
-
-    b64_auth = base64.b64encode(
-        auth_str.encode()
-    ).decode()
-
-    return {
-        "Authorization":
-            f"Basic {b64_auth}"
-    }
-
-
-async def get_paypal_access_token():
-
-    if not PAYPAL_CLIENT_ID or not PAYPAL_SECRET_KEY:
-        return None
-
-    timeout = aiohttp.ClientTimeout(
-        total=15
-    )
-
-    async with aiohttp.ClientSession(
-        timeout=timeout
-    ) as session:
-
-        url = (
-            "https://api-m.paypal.com/"
-            "v1/oauth2/token"
-        )
-
-        headers = get_paypal_basic_auth()
-
-        headers[
-            "Content-Type"
-        ] = (
-            "application/"
-            "x-www-form-urlencoded"
-        )
-
-        data = {
-            "grant_type":
-                "client_credentials"
-        }
-
-        async with session.post(
-            url,
-            headers=headers,
-            data=data,
-        ) as resp:
-
-            if resp.status != 200:
-
-                logger.error(
-                    "PayPal token error: %s",
-                    await resp.text(),
-                )
-
-                return None
-
-            result = await resp.json()
-
-            return result.get(
-                "access_token"
-            )
-
-
-@api_app.post(
-    "/api/paypal/create-order"
-)
-async def create_paypal_order(
-    req: PayPalOrderRequest,
-):
-
-    if req.amount <= 0:
-
-        return {
-            "error":
-                "Amount must be greater than zero"
-        }
-
-    token = await get_paypal_access_token()
-
-    if not token:
-
-        return {
-            "error":
-                "PayPal is not configured"
-        }
-
-    timeout = aiohttp.ClientTimeout(
-        total=15
-    )
-
-    async with aiohttp.ClientSession(
-        timeout=timeout
-    ) as session:
-
-        paypal_api_url = (
-            "https://api-m.paypal.com/"
-            "v2/checkout/orders"
-        )
-
-        headers = {
-            "Authorization":
-                f"Bearer {token}",
-
-            "Content-Type":
-                "application/json",
-        }
-
-        payload = {
-
-            "intent":
-                "CAPTURE",
-
-            "purchase_units": [
-                {
-                    "amount": {
-                        "currency_code":
-                            "USD",
-
-                        "value":
-                            f"{req.amount:.2f}",
-                    }
-                }
-            ],
-        }
-
-        async with session.post(
-            paypal_api_url,
-            json=payload,
-            headers=headers,
-        ) as resp:
-
-            data = await resp.json()
-
-            if resp.status not in (
-                200,
-                201,
-            ):
-
-                return {
-                    "error":
-                        data
-                }
-
-            return data
-
-
-@api_app.post(
-    "/api/paypal/capture-order"
-)
-async def capture_paypal_order(
-    req: PayPalCaptureRequest,
-):
-
-    if not req.order_id:
-
-        return {
-            "error":
-                "order_id is required"
-        }
-
-    token = await get_paypal_access_token()
-
-    if not token:
-
-        return {
-            "error":
-                "PayPal is not configured"
-        }
-
-    timeout = aiohttp.ClientTimeout(
-        total=20
-    )
-
-    async with aiohttp.ClientSession(
-        timeout=timeout
-    ) as session:
-
-        url = (
-            "https://api-m.paypal.com/"
-            f"v2/checkout/orders/"
-            f"{req.order_id}/capture"
-        )
-
-        headers = {
-            "Authorization":
-                f"Bearer {token}",
-
-            "Content-Type":
-                "application/json",
-        }
-
-        async with session.post(
-            url,
-            headers=headers,
-        ) as resp:
-
-            data = await resp.json()
-
-            if resp.status not in (
-                200,
-                201,
-            ):
-
-                return {
-                    "error":
-                        data
-                }
-
-            return {
-                "success":
-                    True,
-
-                "paypal":
-                    data,
-
-                "product_details":
-                    req.product_details,
-            }
-
-
-# ============================================================
-# 🧹 CACHE CLEANUP
-# ============================================================
-
-async def cache_cleanup_loop():
-
-    while True:
-
-        try:
-
-            now = time.time()
-
-            expired = []
-
-            for pid, item in list(
-                product_cache.items()
-            ):
-
-                if (
-                    now
-                    - item.get(
-                        "time",
-                        0,
-                    )
-                    > CACHE_TTL
-                ):
-
-                    expired.append(pid)
-
-            for pid in expired:
-
-                product_cache.pop(
-                    pid,
-                    None,
-                )
-
-        except Exception as e:
-
-            logger.warning(
-                "Cache cleanup error: %s",
-                e,
-            )
-
-        await asyncio.sleep(
-            600
-        )
-
-
-# ============================================================
-# 🚀 RUN FASTAPI
-# ============================================================
-
-def run_api():
-
-    uvicorn.run(
-        api_app,
-        host="0.0.0.0",
-        port=PORT,
-        log_level="info",
-    )
-
-
-# ============================================================
-# 🚀 MAIN
-# ============================================================
-
-async def main():
-
-    if not TOKEN:
-
-        raise RuntimeError(
-            "BOT_TOKEN is missing. Put your Telegram bot token in the TOKEN variable at the top of bot.py."
-        )
-
-    application = (
-        ApplicationBuilder()
-        .token(TOKEN)
-        .build()
-    )
-
-    application.add_handler(
-        CommandHandler(
-            "start",
-            start_command,
-        )
-    )
-
-    application.add_handler(
-        MessageHandler(
-            filters.TEXT
-            & ~filters.COMMAND,
-            handle_message,
-        )
-    )
-
-    # Start FastAPI in background thread
-    api_thread = threading.Thread(
-        target=run_api,
-        daemon=True,
-    )
-
-    api_thread.start()
-
-    # Cache cleanup
-    asyncio.create_task(
-        cache_cleanup_loop()
-    )
-
-    logger.info(
-        "Kouki Shop Bot starting..."
-    )
-
-    logger.info(
-        "USD_TO_DZD = %s",
-        USD_TO_DZD,
-    )
-
-    logger.info(
-        "SHIP_TO_COUNTRY = %s",
-        SHIP_TO_COUNTRY,
-    )
-
-    logger.info(
-        "CHECKOUT_BUFFER = %s (+%s%%)",
-        CHECKOUT_BUFFER,
-        round(
-            (CHECKOUT_BUFFER - 1)
-            * 100
-        ),
-    )
-
-    await application.initialize()
-
-    await application.start()
-
-    await application.updater.start_polling()
-
+def start_health_server():
     try:
+        from fastapi import FastAPI
+        import uvicorn
 
-        while True:
-            await asyncio.sleep(3600)
+        app = FastAPI()
 
-    finally:
+        @app.get("/")
+        def health():
+            return {"status": "ok", "service": "kouki-shop-bot", "time": datetime.utcnow().isoformat()}
 
-        await application.updater.stop()
-        await application.stop()
-        await application.shutdown()
+        def run():
+            uvicorn.run(app, host="0.0.0.0", port=10000, log_level="warning")
+
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        logger.info("Health check server started on port 10000")
+    except Exception as e:
+        logger.warning("Could not start health server (fastapi/uvicorn missing?): %s", e)
+
+
+# ---------------------------------------------------------------------------
+# ENTRY POINT
+# ---------------------------------------------------------------------------
+
+def main():
+    if not BOT_TOKEN or BOT_TOKEN.startswith("YOUR_"):
+        raise RuntimeError("BOT_TOKEN is not set. Edit bot.py and put your real Telegram bot token.")
+
+    if not ALIEXPRESS_APP_KEY or ALIEXPRESS_APP_KEY.startswith("YOUR_"):
+        logger.warning("AliExpress APP_KEY looks like a placeholder - product lookups will fail.")
+
+    start_health_server()
+
+    application: Application = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    application.add_error_handler(error_handler)
+
+    logger.info("Kouki Shop bot starting (polling mode) ...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 
 if __name__ == "__main__":
-
-    try:
-        asyncio.run(
-            main()
-        )
-
-    except KeyboardInterrupt:
-
-        logger.info(
-            "Bot stopped."
-        )
+    main()
