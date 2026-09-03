@@ -29,6 +29,10 @@ import uvicorn
 from aliexpress_api import AliexpressApi, models
 
 
+# ============================================================
+# ⚙️ CONFIGURATION
+# ============================================================
+
 # ==========================================
 # ⚙️ الإعدادات الأساسية
 # ==========================================
@@ -36,8 +40,6 @@ TOKEN = "8735963784:AAHpOSCihKDLNSm08qtQw8_4hAJ5yy689f8"
 APP_KEY = "515874"
 APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
 TRACKING_ID = '130740'
-
-USD_TO_DZD = 260
 # Optional:
 # USD_TO_DZD=260
 # CHECKOUT_BUFFER=1.14
