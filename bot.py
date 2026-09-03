@@ -23,72 +23,39 @@ from telegram.constants import ParseMode
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 
 from aliexpress_api import AliexpressApi, models
 
 
 # ============================================================
-# ⚙️ CONFIGURATION
+# ⚙️ CONFIGURATION — NO ENVIRONMENT VARIABLES
 # ============================================================
+# Put your credentials directly below.
+# Do NOT share this file publicly after adding your secrets.
 
-# ==========================================
-# ⚙️ الإعدادات الأساسية
-# ==========================================
+
 TOKEN = "8735963784:AAHpOSCihKDLNSm08qtQw8_4hAJ5yy689f8"
 APP_KEY = "515874"
 APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
 TRACKING_ID = '130740'
-# Optional:
-# USD_TO_DZD=260
-# CHECKOUT_BUFFER=1.14
-# MAX_CHECKOUT_BUFFER=1.20
-# CACHE_TTL=21600
-# PORT=8000
 
-TOKEN = os.getenv("BOT_TOKEN", "")
-APP_KEY = os.getenv("ALIEXPRESS_APP_KEY", "")
-APP_SECRET = os.getenv("ALIEXPRESS_APP_SECRET", "")
-TRACKING_ID = os.getenv("ALIEXPRESS_TRACKING_ID", "")
+# Fixed Kouki Shop pricing settings
+USD_TO_DZD = 260.0
+CHECKOUT_BUFFER = 1.14
+MAX_CHECKOUT_BUFFER = 1.20
+CACHE_TTL = 900
+PORT = 8000
+RESELLER_MARKUP = 1.30
 
-USD_TO_DZD = float(os.getenv("USD_TO_DZD", "260"))
+# Destination country for shipping lookup
+SHIP_TO_COUNTRY = "DZ"
 
-# Example:
-# $11.93 API price × 1.12 = $13.36 estimated checkout price
-CHECKOUT_BUFFER = float(os.getenv("CHECKOUT_BUFFER", "1.14"))
+# Shipping tax parameter used by the shipping lookup.
+SHIPPING_TAX_RATE = "0"
 
-# AliExpress destination used for country-specific price/shipping lookup.
-SHIP_TO_COUNTRY = os.getenv("SHIP_TO_COUNTRY", "DZ").upper()
-
-# The affiliate shipping endpoint expects a tax-rate parameter. We do not
-# add a separate tax amount to the customer's price here; shipping is the
-# only extra cost added after the 14% product buffer.
-SHIPPING_TAX_RATE = os.getenv("SHIPPING_TAX_RATE", "0")
-
-# Safety limit for the buffer.
-MAX_CHECKOUT_BUFFER = float(
-    os.getenv("MAX_CHECKOUT_BUFFER", "1.20")
-)
-
-CACHE_TTL = int(
-    os.getenv("CACHE_TTL", "21600")
-)
-
-PORT = int(
-    os.getenv("PORT", "8000")
-)
-
-# Reseller markup used only for the suggested resale price.
-RESELLER_MARKUP = float(
-    os.getenv("RESELLER_MARKUP", "1.30")
-)
-
-FACEBOOK_URL = os.getenv(
-    "FACEBOOK_URL",
-    "https://www.facebook.com/XBHTHAGOAT/"
-)
-
+FACEBOOK_URL = "https://www.facebook.com/XBHTHAGOAT/"
 
 # ============================================================
 # 📝 LOGGING
@@ -106,13 +73,15 @@ logger = logging.getLogger("kouki-shop-bot")
 # 🔐 STARTUP VALIDATION
 # ============================================================
 
-if not TOKEN:
-    logger.warning("BOT_TOKEN is not configured.")
+if not TOKEN or TOKEN.startswith("PASTE_YOUR_"):
+    logger.warning("BOT_TOKEN is not configured in bot.py.")
 
-if not APP_KEY or not APP_SECRET or not TRACKING_ID:
-    logger.warning(
-        "AliExpress credentials are not fully configured."
-    )
+if (
+    not APP_KEY or APP_KEY.startswith("PASTE_YOUR_")
+    or not APP_SECRET or APP_SECRET.startswith("PASTE_YOUR_")
+    or not TRACKING_ID or TRACKING_ID.startswith("PASTE_YOUR_")
+):
+    logger.warning("AliExpress credentials are not fully configured in bot.py.")
 
 
 # ============================================================
@@ -2016,18 +1985,12 @@ class PayPalOrderRequest(BaseModel):
 
 class PayPalCaptureRequest(BaseModel):
     order_id: str
-    product_details: dict = {}
+    product_details: dict = Field(default_factory=dict)
 
 
-PAYPAL_CLIENT_ID = os.getenv(
-    "PAYPAL_CLIENT_ID",
-    "",
-)
+PAYPAL_CLIENT_ID = "PASTE_YOUR_PAYPAL_CLIENT_ID_HERE"
 
-PAYPAL_SECRET_KEY = os.getenv(
-    "PAYPAL_SECRET_KEY",
-    "", 
-)
+PAYPAL_SECRET_KEY = "PASTE_YOUR_PAYPAL_SECRET_KEY_HERE"
 
 
 def get_paypal_basic_auth():
@@ -2329,7 +2292,7 @@ async def main():
     if not TOKEN:
 
         raise RuntimeError(
-            "BOT_TOKEN environment variable is missing."
+            "BOT_TOKEN is missing. Put your Telegram bot token in the TOKEN variable at the top of bot.py."
         )
 
     application = (
