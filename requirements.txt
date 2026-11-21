@@ -5,4 +5,4 @@ aiohttp
 python-telegram-bot
 python-aliexpress-api
 Pillow
-
+python-dotenv
