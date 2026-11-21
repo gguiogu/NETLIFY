@@ -25,7 +25,7 @@ from aliexpress_api import AliexpressApi, models
 # ==========================================
 # ⚙️ الإعدادات الأساسية
 # ==========================================
-TOKEN = "8735963784:AAHpOSCihKDLNSm08qtQw8_4hAJ5yy689f8"
+TOKEN = "8735963784:AAEkXZjDYfWsfuT2uDvwF3VZvA_vVAPfQyY"
 APP_KEY = "515874"
 APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
 TRACKING_ID = '130740'
