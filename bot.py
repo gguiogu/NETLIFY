@@ -18,20 +18,38 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import threading
-from telegram.constants import ParseMode
+import os
+from dotenv import load_dotenv
 
 from aliexpress_api import AliexpressApi, models
 
 # ==========================================
-# ⚙️ الإعدادات الأساسية
+# ⚙️ الإعدادات الأساسية (loaded from .env locally
+# or Render Environment Variables in production)
 # ==========================================
-TOKEN = "8735963784:AAEkXZjDYfWsfuT2uDvwF3VZvA_vVAPfQyY"
-APP_KEY = "515874"
-APP_SECRET = "jSWlobcAFLVp9Jo4QEjcbqXpbQBk4JRQ"
-TRACKING_ID = '130740'
+load_dotenv()
 
-USD_TO_DZD = 260
-PROFIT_MARGIN = 1.65 # هامش الربح للتاجر
+TOKEN = os.getenv("TOKEN")
+APP_KEY = os.getenv("APP_KEY")
+APP_SECRET = os.getenv("APP_SECRET")
+TRACKING_ID = os.getenv("TRACKING_ID")
+
+_missing = [
+    name for name, value in {
+        "TOKEN": TOKEN,
+        "APP_KEY": APP_KEY,
+        "APP_SECRET": APP_SECRET,
+        "TRACKING_ID": TRACKING_ID,
+    }.items() if not value
+]
+if _missing:
+    raise RuntimeError(
+        "Missing environment variables: " + ", ".join(_missing)
+        + ". Add them to your local .env file or Render Environment settings."
+    )
+
+USD_TO_DZD = 250
+PROFIT_MARGIN = 1.4 # هامش الربح للتاجر
 
 aliexpress = AliexpressApi(APP_KEY, APP_SECRET, models.Language.EN, models.Currency.USD, TRACKING_ID)
 LINK_REGEX = re.compile(r'https?://([a-zA-Z0-9.-]+\.)?aliexpress\.[a-z]{2,3}(/[^\s]*)?', re.IGNORECASE)
