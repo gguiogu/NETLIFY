@@ -27,12 +27,25 @@ from aliexpress_api import AliexpressApi, models
 # ⚙️ الإعدادات الأساسية (loaded from .env locally
 # or Render Environment Variables in production)
 # ==========================================
-load_dotenv()
+# Render-provided environment variables take precedence.
+# A local .env file is used only for development and never overwrites Render values.
+load_dotenv(override=False)
 
-TOKEN = os.getenv("TOKEN")
-APP_KEY = os.getenv("APP_KEY")
-APP_SECRET = os.getenv("APP_SECRET")
-TRACKING_ID = os.getenv("TRACKING_ID")
+_REQUIRED_ENV_VARS = ("TOKEN", "APP_KEY", "APP_SECRET", "TRACKING_ID")
+
+print("===== KOUKISHOP ENVIRONMENT CHECK =====")
+for _name in _REQUIRED_ENV_VARS:
+    _value = os.environ.get(_name)
+    _status = "MISSING" if _value is None else (
+        "EMPTY" if not _value.strip() else "SET"
+    )
+    print(f"{_name}: {_status}")
+print("=======================================")
+
+TOKEN = os.environ.get("TOKEN")
+APP_KEY = os.environ.get("APP_KEY")
+APP_SECRET = os.environ.get("APP_SECRET")
+TRACKING_ID = os.environ.get("TRACKING_ID")
 
 _missing = [
     name for name, value in {
@@ -40,12 +53,14 @@ _missing = [
         "APP_KEY": APP_KEY,
         "APP_SECRET": APP_SECRET,
         "TRACKING_ID": TRACKING_ID,
-    }.items() if not value
+    }.items()
+    if value is None or not value.strip()
 ]
+
 if _missing:
     raise RuntimeError(
-        "Missing environment variables: " + ", ".join(_missing)
-        + ". Add them to your local .env file or Render Environment settings."
+        "Missing or empty environment variables: " + ", ".join(_missing)
+        + ". Add these exact names to the Environment settings of this Render service."
     )
 
 USD_TO_DZD = 250
@@ -433,8 +448,15 @@ async def product_api(url: str):
     except Exception as e:
         return {"error": str(e)}
 
+@api_app.get("/health")
+async def health_check():
+    return {"status": "ok", "service": "koukishop-bot-api"}
+
+
 def run_api():
-    uvicorn.run(api_app, host="0.0.0.0", port=8000)
+    # Render assigns PORT dynamically for Web Services.
+    port = int(os.environ.get("PORT", "10000"))
+    uvicorn.run(api_app, host="0.0.0.0", port=port)
 
 if __name__ == '__main__':
     # تشغيل API في Thread
@@ -443,5 +465,5 @@ if __name__ == '__main__':
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler('start', start_command))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("Kouki Shop Bot and API Server are now running on port 8000.")
+    print(f"Kouki Shop Telegram bot started; API listening on port {os.environ.get('PORT', '10000')}.")
     app.run_polling()
